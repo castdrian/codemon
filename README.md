@@ -3,9 +3,9 @@
 Menu bar app that tracks your Claude.ai usage — session, weekly, and extra credits — with a small floating widget. No DevTools, no manual cookie pasting.
 
 <p align="center">
-  <img src="https://adriancastro.dev/n1e0y2qlww3o.png" alt="claudemon screenshot 1" width="320" />
-  <img src="https://adriancastro.dev/eslr2u8kasmr.png" alt="claudemon screenshot 2" width="320" />
-  <img src="https://adriancastro.dev/ysbcxna3ti57.png" alt="claudemon screenshot 3" width="320" />
+  <img src="https://adriancastro.dev/n1e0y2qlww3o.png" alt="claudemon screenshot 1" width="260" />
+  <img src="https://adriancastro.dev/eslr2u8kasmr.png" alt="claudemon screenshot 2" width="260" />
+  <img src="https://adriancastro.dev/ysbcxna3ti57.png" alt="claudemon screenshot 3" width="260" />
 </p>
 
 ## Features
