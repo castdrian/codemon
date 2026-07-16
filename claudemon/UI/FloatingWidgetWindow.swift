@@ -3,6 +3,9 @@ import SwiftUI
 
 final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
     private static let cornerSnapThreshold: CGFloat = 40
+    private static let originDefaultsKey = "floatingWidgetOrigin"
+
+    private var isSnapping = false
 
     init(usageStore: UsageStore) {
         super.init(
@@ -29,7 +32,12 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         // the final size for the panel's whole lifetime — no later resize to
         // fight with while anchoring the top-left corner.
         setContentSize(hostingView.fittingSize)
-        positionTopLeft()
+
+        if let savedOrigin = Self.loadSavedOrigin() {
+            setFrame(constrainFrameRect(NSRect(origin: savedOrigin, size: frame.size), to: screen ?? NSScreen.main), display: false)
+        } else {
+            positionTopLeft()
+        }
     }
 
     func positionTopLeft(margin: CGFloat = 12) {
@@ -60,12 +68,18 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
     /// the final position once the user lets go, without a dedicated
     /// "drag ended" delegate method.
     func windowDidMove(_ notification: Notification) {
-        guard NSEvent.pressedMouseButtons == 0 else { return }
-        snapToNearestCornerIfClose()
+        guard NSEvent.pressedMouseButtons == 0, !isSnapping else { return }
+        if !snapToNearestCornerIfClose() {
+            Self.saveOrigin(frame.origin)
+        }
     }
 
-    private func snapToNearestCornerIfClose() {
-        guard let screen = screen ?? NSScreen.main else { return }
+    /// Returns whether a snap animation was started — the caller only
+    /// persists the position immediately when it wasn't, since a snap
+    /// persists its own (different) final origin once the animation ends.
+    @discardableResult
+    private func snapToNearestCornerIfClose() -> Bool {
+        guard let screen = screen ?? NSScreen.main else { return false }
         let visible = screen.visibleFrame
         let size = frame.size
 
@@ -77,17 +91,33 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         ]
 
         guard let nearest = corners.min(by: { distance($0, frame.origin) < distance($1, frame.origin) }),
-              distance(nearest, frame.origin) <= Self.cornerSnapThreshold else { return }
+              distance(nearest, frame.origin) <= Self.cornerSnapThreshold else { return false }
 
+        isSnapping = true
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             animator().setFrameOrigin(nearest)
+        } completionHandler: { [weak self] in
+            guard let self else { return }
+            isSnapping = false
+            Self.saveOrigin(frame.origin)
         }
+        return true
     }
 
     private func distance(_ a: NSPoint, _ b: NSPoint) -> CGFloat {
         hypot(a.x - b.x, a.y - b.y)
+    }
+
+    private static func saveOrigin(_ origin: NSPoint) {
+        UserDefaults.standard.set([origin.x, origin.y], forKey: originDefaultsKey)
+    }
+
+    private static func loadSavedOrigin() -> NSPoint? {
+        guard let coordinates = UserDefaults.standard.array(forKey: originDefaultsKey) as? [Double],
+              coordinates.count == 2 else { return nil }
+        return NSPoint(x: coordinates[0], y: coordinates[1])
     }
 
     override var canBecomeKey: Bool { false }
