@@ -88,7 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         widgetItem.state = SettingsStore.shared.showFloatingWidget ? .on : .off
         menu.addItem(widgetItem)
 
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: "")
         menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
         menu.addItem(.separator())
 
