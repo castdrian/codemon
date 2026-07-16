@@ -81,35 +81,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(.separator())
         }
 
-        menu.addItem(withTitle: "Refresh Now", action: #selector(refreshNow), keyEquivalent: "r")
+        menu.addItem(Self.item("Refresh Now", symbol: "arrow.clockwise", action: #selector(refreshNow), keyEquivalent: "r"))
         menu.addItem(.separator())
 
-        let widgetItem = NSMenuItem(title: "Show Floating Widget", action: #selector(toggleFloatingWidget), keyEquivalent: "")
+        let widgetItem = Self.item("Show Floating Widget", symbol: "rectangle.inset.filled", action: #selector(toggleFloatingWidget))
         widgetItem.state = SettingsStore.shared.showFloatingWidget ? .on : .off
         menu.addItem(widgetItem)
 
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: "")
-        menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        menu.addItem(Self.item("Settings…", symbol: "gearshape", action: #selector(openSettings)))
+        menu.addItem(Self.item("Check for Updates…", symbol: "arrow.down.circle", action: #selector(checkForUpdates)))
         menu.addItem(.separator())
 
         switch auth.authState {
         case .signedIn:
-            menu.addItem(withTitle: "Sign Out", action: #selector(signOut), keyEquivalent: "")
+            menu.addItem(Self.item("Sign Out", symbol: "person.crop.circle.badge.xmark", action: #selector(signOut)))
         case .expired:
-            menu.addItem(withTitle: "Sign In Again…", action: #selector(signIn), keyEquivalent: "")
+            menu.addItem(Self.item("Sign In Again…", symbol: "person.crop.circle.badge.exclamationmark", action: #selector(signIn)))
         case .signedOut:
-            menu.addItem(withTitle: "Sign In…", action: #selector(signIn), keyEquivalent: "")
+            menu.addItem(Self.item("Sign In…", symbol: "person.crop.circle.badge.plus", action: #selector(signIn)))
         }
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Support claudemon on Ko-fi…", action: #selector(openKofi), keyEquivalent: "")
+        menu.addItem(Self.item("Support claudemon on Ko-fi…", symbol: "cup.and.saucer", action: #selector(openKofi)))
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit claudemon", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(Self.item("Quit claudemon", symbol: "power", action: #selector(quit), keyEquivalent: "q"))
 
         for item in menu.items {
             item.target = self
         }
         statusItem.menu = menu
+    }
+
+    private static func item(_ title: String, symbol: String, action: Selector, keyEquivalent: String = "") -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        item.image = image
+        return item
     }
 
     @objc private func refreshNow() {
