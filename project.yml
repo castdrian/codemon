@@ -1,6 +1,6 @@
 name: claudemon
 options:
-  bundleIdPrefix: com.adrian
+  bundleIdPrefix: dev.adrian
   deploymentTarget:
     macOS: "13.0"
 packages:
@@ -33,7 +33,7 @@ targets:
         com.apple.security.network.client: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.adrian.claudemon
+        PRODUCT_BUNDLE_IDENTIFIER: dev.adrian.claudemon
         PRODUCT_NAME: claudemon
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
