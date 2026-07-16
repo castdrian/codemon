@@ -1,0 +1,51 @@
+name: claudemon
+options:
+  bundleIdPrefix: com.adrian
+  deploymentTarget:
+    macOS: "13.0"
+packages:
+  AppUpdater:
+    url: https://github.com/s1ntoneli/AppUpdater.git
+    branch: main
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: 2.2.0
+targets:
+  claudemon:
+    type: application
+    platform: macOS
+    sources:
+      - path: claudemon
+    dependencies:
+      - package: AppUpdater
+      - package: KeyboardShortcuts
+    info:
+      path: claudemon/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSHumanReadableCopyright: ""
+    entitlements:
+      path: claudemon/claudemon.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.adrian.claudemon
+        PRODUCT_NAME: claudemon
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: true
+        GENERATE_INFOPLIST_FILE: false
+schemes:
+  claudemon:
+    build:
+      targets:
+        claudemon: all
+    run:
+      config: Debug

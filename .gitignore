@@ -1,0 +1,28 @@
+# Xcode
+
+## User settings
+xcuserdata/
+
+## Xcode
+*.xcscmblueprint
+DerivedData/
+*.moved-aside
+*.xcuserstate
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+## SPM
+.build/
+.swiftpm/
+Package.pins
+Package.resolved.orig
+/SourcePackages/
+
+## Obj-C/Swift specific
+*.hmap
+
+## macOS
+.DS_Store
+
+## CI / local build output
+/build/

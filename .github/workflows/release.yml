@@ -1,0 +1,143 @@
+name: Build and Release App
+
+on:
+    workflow_dispatch:
+    workflow_call:
+
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    release:
+        runs-on: macos-26
+        timeout-minutes: 45
+        permissions:
+            contents: write
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Resolve project info
+              id: project
+              run: |
+                  XCODEPROJ=$(find . -maxdepth 1 -name "*.xcodeproj" -type d | head -1)
+                  XCODEPROJ="${XCODEPROJ#./}"
+                  APP_NAME=$(basename "$XCODEPROJ" .xcodeproj)
+                  VERSION=$(grep -m1 'MARKETING_VERSION' "$XCODEPROJ/project.pbxproj" | tr -d ' ;' | cut -d= -f2)
+                  BUNDLE_ID=$(grep -m1 'PRODUCT_BUNDLE_IDENTIFIER' "$XCODEPROJ/project.pbxproj" | tr -d ' ;' | cut -d= -f2)
+                  SCHEME=$(basename "$(find "$XCODEPROJ/xcshareddata/xcschemes" -name "*.xcscheme" | head -1)" .xcscheme)
+                  BUILD_NUMBER=$(git rev-list --count HEAD)
+                  echo "app-name=$APP_NAME" >> "$GITHUB_OUTPUT"
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+                  echo "bundle-id=$BUNDLE_ID" >> "$GITHUB_OUTPUT"
+                  echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+                  echo "build-number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+
+            - name: Xcode Select Version
+              uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest
+
+            - name: Fetch Signing Assets
+              uses: castdrian/setup-apple-certificate@main
+              id: cert
+              with:
+                  app-store-connect-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  app-store-connect-issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  app-store-connect-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+                  distribution-private-key: ${{ secrets.DISTRIBUTION_PRIVATE_KEY_BASE64 }}
+                  bundle-identifier: ${{ steps.project.outputs.bundle-id }}
+                  certificate-type: DEVELOPER_ID
+
+            - name: Install Signing Assets
+              uses: apple-actions/import-codesign-certs@v7
+              with:
+                  p12-file-base64: ${{ steps.cert.outputs.p12-certificate-base64 }}
+                  p12-password: ${{ steps.cert.outputs.p12-password }}
+
+            - name: Cache SPM dependencies
+              uses: actions/cache@v6
+              with:
+                  path: SourcePackages
+                  key: spm-${{ hashFiles('**/Package.resolved') }}
+                  restore-keys: |
+                      spm-
+
+            - name: Archive app
+              run: |
+                  xcodebuild archive \
+                    -scheme "${{ steps.project.outputs.scheme }}" \
+                    -configuration "Release" \
+                    -archivePath "build/${{ steps.project.outputs.app-name }}.xcarchive" \
+                    -destination "generic/platform=macOS,name=Any Mac" \
+                    -clonedSourcePackagesDirPath SourcePackages \
+                    CODE_SIGN_STYLE=Manual \
+                    CODE_SIGN_IDENTITY="${{ steps.cert.outputs.codesign-identity }}" \
+                    PROVISIONING_PROFILE_SPECIFIER="" \
+                    CURRENT_PROJECT_VERSION="${{ steps.project.outputs.build-number }}" \
+                    | xcbeautify
+
+            - name: Export app
+              run: |
+                  xcodebuild -exportArchive \
+                    -archivePath "build/${{ steps.project.outputs.app-name }}.xcarchive" \
+                    -exportOptionsPlist "ExportOptions.plist" \
+                    -exportPath "build/export" \
+                    | xcbeautify
+
+            - name: Notarize and staple app
+              run: |
+                  trap 'rm -f /tmp/notary_key.p8' EXIT
+                  echo "${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}" | base64 --decode > /tmp/notary_key.p8
+
+                  /usr/bin/ditto -c -k --keepParent \
+                    "build/export/${{ steps.project.outputs.app-name }}.app" \
+                    "build/notarize-submit.zip"
+
+                  xcrun notarytool submit "build/notarize-submit.zip" \
+                    --key /tmp/notary_key.p8 \
+                    --key-id "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" \
+                    --issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+                    --wait
+
+                  xcrun stapler staple "build/export/${{ steps.project.outputs.app-name }}.app"
+
+            - name: Package app
+              run: |
+                  ZIP="build/${{ steps.project.outputs.app-name }}-${{ steps.project.outputs.version }}.zip"
+                  /usr/bin/ditto -c -k --keepParent \
+                    "build/export/${{ steps.project.outputs.app-name }}.app" \
+                    "$ZIP"
+                  shasum -a 256 "$ZIP" | awk '{print $1}' > "$ZIP.sha256"
+
+            - name: Extract release notes from CHANGELOG.md
+              run: |
+                  VERSION="${{ steps.project.outputs.version }}"
+                  awk -v ver="$VERSION" '
+                      /^## \[/ {
+                          if (found) exit
+                          if ($0 ~ ("^## \\[" ver "\\]")) { found=1; next }
+                          next
+                      }
+                      found { print }
+                  ' CHANGELOG.md > release_notes.md
+
+                  if [ ! -s release_notes.md ]; then
+                      echo "No CHANGELOG.md section found for $VERSION." > release_notes.md
+                  fi
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v3
+              with:
+                  tag_name: ${{ steps.project.outputs.version }}
+                  body_path: release_notes.md
+                  files: |
+                      build/${{ steps.project.outputs.app-name }}-${{ steps.project.outputs.version }}.zip
+                      build/${{ steps.project.outputs.app-name }}-${{ steps.project.outputs.version }}.zip.sha256
+                  fail_on_unmatched_files: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

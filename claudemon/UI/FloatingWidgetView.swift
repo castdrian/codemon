@@ -1,0 +1,108 @@
+import SwiftUI
+
+struct FloatingWidgetView: View {
+    @ObservedObject var usageStore: UsageStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header
+            usageRow(title: "Session", window: usageStore.snapshot?.session)
+            usageRow(title: "Weekly", window: usageStore.snapshot?.weekly)
+            creditRow(usageStore.snapshot?.credit)
+        }
+        .padding(14)
+        .frame(width: 216, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.08))
+        )
+    }
+
+    @ViewBuilder
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Text(usageStore.accountInfo?.displayName ?? "claudemon")
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                if let plan = usageStore.accountInfo?.planLabel {
+                    Text("· \(plan)")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Divider()
+        }
+    }
+
+    @ViewBuilder
+    private func usageRow(title: String, window: UsageWindow?) -> some View {
+        let value = window?.utilization
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                Spacer()
+                Text(value.map { "\(Int($0.rounded()))%" } ?? "—")
+                    .font(.system(size: 10, weight: .medium))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(.primary)
+
+            UsageBar(percent: value ?? 0, color: Self.claudeColor(for: value ?? 0))
+
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(Self.resetLabel(window?.resetsAt, now: context.date))
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func creditRow(_ credit: CreditUsage?) -> some View {
+        usageRow(title: "Credits", window: credit?.percentUsed.map { UsageWindow(utilization: $0, resetsAt: nil) })
+    }
+
+    private static func resetLabel(_ resetsAt: Date?, now: Date) -> String {
+        guard let resetsAt else { return " " }
+        let interval = resetsAt.timeIntervalSince(now)
+        guard interval > 0 else { return "resetting…" }
+
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+        if hours > 0 { return "resets in \(hours)h \(minutes)m" }
+        if minutes > 0 { return "resets in \(minutes)m" }
+        return "resets in \(Int(interval))s"
+    }
+
+    private static func claudeColor(for percent: Double) -> Color {
+        switch percent {
+        case ..<70: return Color(red: 0.204, green: 0.478, blue: 0.965)
+        case ..<90: return Color(red: 0.988, green: 0.749, blue: 0.176)
+        default: return Color(red: 0.910, green: 0.298, blue: 0.235)
+        }
+    }
+}
+
+/// `ProgressView(.linear)` ignores `.tint()` on macOS and always renders the
+/// system gray track, so the fill is drawn manually here instead.
+private struct UsageBar: View {
+    let percent: Double
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.12))
+                Capsule()
+                    .fill(color)
+                    .frame(width: geometry.size.width * min(max(percent, 0), 100) / 100)
+            }
+        }
+        .frame(height: 5)
+    }
+}
