@@ -25,6 +25,8 @@ struct SettingsView: View {
 
             Section("Widget") {
                 Toggle("Show floating widget", isOn: $prefs.showFloatingWidget)
+                Toggle("Only when Claude is focused", isOn: $prefs.showWidgetOnlyWhenClaudeFocused)
+                    .disabled(!prefs.showFloatingWidget)
                 Toggle("Launch at login", isOn: $prefs.launchAtLogin)
                 KeyboardShortcuts.Recorder("Toggle widget:", name: .toggleWidget)
             }

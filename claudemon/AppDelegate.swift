@@ -6,6 +6,8 @@ import KeyboardShortcuts
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static let claudeDesktopBundleID = "com.anthropic.claudefordesktop"
+
     private var statusItem: NSStatusItem!
     private let auth = CookieAuthService.shared
     private lazy var usageStore = UsageStore(auth: auth)
@@ -13,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: NSWindowController?
     private var cancellables = Set<AnyCancellable>()
     private let appUpdater = AppUpdater(owner: "castdrian", repo: "claudemon")
+    private var appActivationObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -35,9 +38,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] state in self?.handleUpdaterState(state) }
             .store(in: &cancellables)
 
-        if SettingsStore.shared.showFloatingWidget {
-            showFloatingWidget()
+        updateFloatingWidgetVisibility()
+
+        appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.updateFloatingWidgetVisibility()
         }
+
+        SettingsStore.shared.$showWidgetOnlyWhenClaudeFocused
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updateFloatingWidgetVisibility() }
+            .store(in: &cancellables)
 
         if auth.authState == .signedOut {
             auth.beginSignIn()
@@ -106,16 +118,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleFloatingWidget() {
         SettingsStore.shared.showFloatingWidget.toggle()
-        if SettingsStore.shared.showFloatingWidget {
-            showFloatingWidget()
-        } else {
-            floatingWindow?.close()
-            floatingWindow = nil
-        }
+        updateFloatingWidgetVisibility()
         buildMenu()
     }
 
-    private func showFloatingWidget() {
+    /// The single place that decides whether the panel should be on screen —
+    /// driven by the master toggle, and (when enabled) by whether Claude
+    /// desktop is the frontmost app. Keeps the same window instance around
+    /// rather than recreating it, so a dragged/snapped position survives
+    /// being hidden and shown again.
+    private func updateFloatingWidgetVisibility() {
+        guard SettingsStore.shared.showFloatingWidget else {
+            floatingWindow?.orderOut(nil)
+            return
+        }
+
+        if SettingsStore.shared.showWidgetOnlyWhenClaudeFocused {
+            let isClaudeFocused = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == Self.claudeDesktopBundleID
+            setWidgetWindowVisible(isClaudeFocused)
+        } else {
+            setWidgetWindowVisible(true)
+        }
+    }
+
+    private func setWidgetWindowVisible(_ visible: Bool) {
+        guard visible else {
+            floatingWindow?.orderOut(nil)
+            return
+        }
         if floatingWindow == nil {
             floatingWindow = FloatingWidgetWindow(usageStore: usageStore)
         }

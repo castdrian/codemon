@@ -7,6 +7,9 @@ final class SettingsStore: ObservableObject {
     @Published var showFloatingWidget: Bool {
         didSet { defaults.set(showFloatingWidget, forKey: "showFloatingWidget") }
     }
+    @Published var showWidgetOnlyWhenClaudeFocused: Bool {
+        didSet { defaults.set(showWidgetOnlyWhenClaudeFocused, forKey: "showWidgetOnlyWhenClaudeFocused") }
+    }
     @Published var refreshIntervalMinutes: Double {
         didSet { defaults.set(refreshIntervalMinutes, forKey: "refreshIntervalMinutes") }
     }
@@ -18,6 +21,7 @@ final class SettingsStore: ObservableObject {
 
     private init() {
         showFloatingWidget = defaults.object(forKey: "showFloatingWidget") as? Bool ?? true
+        showWidgetOnlyWhenClaudeFocused = defaults.object(forKey: "showWidgetOnlyWhenClaudeFocused") as? Bool ?? false
         refreshIntervalMinutes = defaults.object(forKey: "refreshIntervalMinutes") as? Double ?? 2
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
