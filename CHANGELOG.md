@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0]
+
+- Fix credit usage showing "—" when no monthly limit is set — the widget now shows the actual remaining prepaid credit balance and derives the progress bar from it
+
 ## [1.0.0]
 
 Initial release.

@@ -8,7 +8,10 @@ struct UsageWindow: Equatable {
 struct CreditUsage: Equatable {
     var remaining: Double?
     var limit: Double?
+    var used: Double?
     var percentUsed: Double?
+    var currency: String?
+    var decimalPlaces: Int
 }
 
 struct UsageSnapshot: Equatable {

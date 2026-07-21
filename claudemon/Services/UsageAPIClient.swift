@@ -74,7 +74,33 @@ struct UsageAPIClient {
             throw UsageAPIError.invalidResponse
         }
 
-        return Self.parse(json)
+        var snapshot = Self.parse(json)
+
+        if let credit = snapshot.credit, credit.limit == nil,
+           let balance = try? await fetchPrepaidBalance(cookieHeader: cookieHeader, orgId: orgId) {
+            let used = credit.used ?? 0
+            let total = used + balance
+            snapshot.credit?.remaining = balance
+            snapshot.credit?.percentUsed = total > 0 ? (used / total) * 100 : 0
+        }
+
+        return snapshot
+    }
+
+    private func fetchPrepaidBalance(cookieHeader: String, orgId: String) async throws -> Double? {
+        var request = URLRequest(url: URL(string: "https://claude.ai/api/organizations/\(orgId)/prepaid/credits")!)
+        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let (data, response) = try await session.data(for: request)
+        try Self.validate(response)
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let amount = json["amount"] as? Double { return amount }
+        if let amount = json["amount"] as? Int { return Double(amount) }
+        return nil
     }
 
     private static func validate(_ response: URLResponse) throws {
@@ -115,12 +141,24 @@ struct UsageAPIClient {
 
     private static func parseCredit(_ json: [String: Any], numberParser number: (Any?) -> Double?) -> CreditUsage? {
         guard let entry = json["extra_usage"] as? [String: Any],
-              let percent = number(entry["utilization"]) else { return nil }
+              entry["is_enabled"] as? Bool == true else { return nil }
 
         let used = number(entry["used_credits"])
         let limit = number(entry["monthly_limit"])
-        let remaining = (limit.flatMap { l in used.map { l - $0 } })
+        guard used != nil || limit != nil else { return nil }
 
-        return CreditUsage(remaining: remaining, limit: limit, percentUsed: percent)
+        let percent = number(entry["utilization"])
+        let remaining = limit.flatMap { l in used.map { l - $0 } }
+        let currency = entry["currency"] as? String
+        let decimalPlaces = (entry["decimal_places"] as? Int) ?? 2
+
+        return CreditUsage(
+            remaining: remaining,
+            limit: limit,
+            used: used,
+            percentUsed: percent,
+            currency: currency,
+            decimalPlaces: decimalPlaces
+        )
     }
 }
