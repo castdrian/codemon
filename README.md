@@ -4,6 +4,7 @@ Menu bar app that tracks your Claude.ai usage — session, weekly, and extra cre
 
 <p align="center">
   <img src="https://adriancastro.dev/rel05geam3lp.png" alt="claudemon screenshot 1" width="260" />
+  <img src="https://adriancastro.dev/io8jo6y8lkjj.png" alt="claudemon screenshot 1" width="260" />
 </p>
 
 ## Features
