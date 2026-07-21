@@ -63,7 +63,47 @@ struct FloatingWidgetView: View {
 
     @ViewBuilder
     private func creditRow(_ credit: CreditUsage?) -> some View {
-        usageRow(title: "Credits", window: credit?.percentUsed.map { UsageWindow(utilization: $0, resetsAt: nil) })
+        let percent = credit?.percentUsed
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Credits")
+                    .font(.system(size: 10, weight: .semibold))
+                Spacer()
+                Text(Self.creditValueLabel(credit))
+                    .font(.system(size: 10, weight: .medium))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(.primary)
+
+            UsageBar(percent: percent ?? 0, color: Self.claudeColor(for: percent ?? 0))
+
+            Text(" ")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private static func creditValueLabel(_ credit: CreditUsage?) -> String {
+        guard let credit else { return "—" }
+        if let remaining = credit.remaining {
+            return "\(formatCurrency(remaining, credit: credit)) left"
+        }
+        if let percent = credit.percentUsed {
+            return "\(Int(percent.rounded()))%"
+        }
+        return "—"
+    }
+
+    private static func formatCurrency(_ minorUnits: Double, credit: CreditUsage) -> String {
+        let value = minorUnits / pow(10, Double(credit.decimalPlaces))
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        if let currency = credit.currency {
+            formatter.currencyCode = currency
+        }
+        formatter.minimumFractionDigits = credit.decimalPlaces
+        formatter.maximumFractionDigits = credit.decimalPlaces
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 
     private static func resetLabel(_ resetsAt: Date?, now: Date) -> String {
