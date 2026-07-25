@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.4]
+
+- Revert 1.3.3. The Codex weekly window does report usage consumed after all, so inverting it painted a freshly reset week as fully spent and red. Codex's own display counts the same allowance down from 100%, which is the inverse of the number the API hands out
+
 ## [1.3.3]
 
 - Read the Codex weekly window as usage remaining rather than usage consumed, so an exhausted week fills the bar and turns red instead of showing an empty bar that reads as untouched. The row also spells out "out of usage" alongside the reset countdown
