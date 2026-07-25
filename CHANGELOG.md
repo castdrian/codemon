@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.0]
+
+- Let the menu bar icon report the state it is monitoring: the gauge needle now tracks the highest usage across every provider and window, sweeping up as you approach a limit — level at under 70%, raised past 70%, and pinned near the top past 90%. Before any usage has loaded it shows a plain speedometer, and it falls back to one if the gauge symbols are unavailable
+
 ## [1.4.1]
 
 - Swap the menu bar icon from a lightning bolt to a speedometer, which reads as a meter against a limit rather than as power or speed

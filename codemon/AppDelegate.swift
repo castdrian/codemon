@@ -16,12 +16,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "speedometer", accessibilityDescription: "codemon")
+        updateStatusIcon()
         buildMenu()
 
         usageStore.objectWillChange
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.buildMenu() }
+            .sink { [weak self] _ in
+                self?.buildMenu()
+                self?.updateStatusIcon()
+            }
             .store(in: &cancellables)
 
         appUpdater.$state
@@ -91,6 +94,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for item in menu.items { item.target = self }
         statusItem.menu = menu
+    }
+
+    private func updateStatusIcon() {
+        let peak = usageStore.providerStores.compactMap { providerStore -> Double? in
+            guard let snapshot = providerStore.snapshot else { return nil }
+            return [snapshot.session?.utilization, snapshot.weekly?.utilization, snapshot.credit?.percentUsed]
+                .compactMap { $0 }
+                .max()
+        }.max()
+
+        let symbol: String
+        switch peak {
+        case .some(let value) where value >= 90: symbol = "gauge.high"
+        case .some(let value) where value >= 70: symbol = "gauge.medium"
+        case .some: symbol = "gauge.low"
+        case nil: symbol = "speedometer"
+        }
+
+        let description = peak.map { "codemon — \(Int($0.rounded()))% used" } ?? "codemon"
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: description)
+            ?? NSImage(systemSymbolName: "speedometer", accessibilityDescription: description)
     }
 
     private static func item(_ title: String, symbol: String, action: Selector, keyEquivalent: String = "") -> NSMenuItem {
