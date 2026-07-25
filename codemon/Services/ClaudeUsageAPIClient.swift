@@ -14,7 +14,7 @@ enum UsageAPIError: Error, LocalizedError {
     }
 }
 
-struct UsageAPIClient {
+struct ClaudeUsageAPIClient {
     private let session = URLSession(configuration: .ephemeral)
 
     func fetchBootstrap(cookieHeader: String) async throws -> (orgId: String, account: AccountInfo) {
@@ -35,8 +35,6 @@ struct UsageAPIClient {
         else {
             throw UsageAPIError.missingOrgId
         }
-
-        KeychainStore.save(orgId, account: "orgId")
 
         let displayName = (account["display_name"] as? String)
             ?? (account["full_name"] as? String)

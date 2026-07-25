@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2732ED167FFC2B46E78C6F07"
-               BuildableName = "claudemon.app"
-               BlueprintName = "claudemon"
-               ReferencedContainer = "container:claudemon.xcodeproj">
+               BlueprintIdentifier = "F1AB35DEAAF5613945E65E09"
+               BuildableName = "codemon.app"
+               BlueprintName = "codemon"
+               ReferencedContainer = "container:codemon.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2732ED167FFC2B46E78C6F07"
-            BuildableName = "claudemon.app"
-            BlueprintName = "claudemon"
-            ReferencedContainer = "container:claudemon.xcodeproj">
+            BlueprintIdentifier = "F1AB35DEAAF5613945E65E09"
+            BuildableName = "codemon.app"
+            BlueprintName = "codemon"
+            ReferencedContainer = "container:codemon.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -55,10 +55,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2732ED167FFC2B46E78C6F07"
-            BuildableName = "claudemon.app"
-            BlueprintName = "claudemon"
-            ReferencedContainer = "container:claudemon.xcodeproj">
+            BlueprintIdentifier = "F1AB35DEAAF5613945E65E09"
+            BuildableName = "codemon.app"
+            BlueprintName = "codemon"
+            ReferencedContainer = "container:codemon.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -74,10 +74,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2732ED167FFC2B46E78C6F07"
-            BuildableName = "claudemon.app"
-            BlueprintName = "claudemon"
-            ReferencedContainer = "container:claudemon.xcodeproj">
+            BlueprintIdentifier = "F1AB35DEAAF5613945E65E09"
+            BuildableName = "codemon.app"
+            BlueprintName = "codemon"
+            ReferencedContainer = "container:codemon.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

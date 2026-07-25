@@ -27,10 +27,6 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
 
         let hostingView = NSHostingView(rootView: FloatingWidgetView(usageStore: usageStore))
         contentView = hostingView
-        // The view's row structure never changes shape (placeholders fill in
-        // for missing data instead of removing rows), so this fitting size is
-        // the final size for the panel's whole lifetime — no later resize to
-        // fight with while anchoring the top-left corner.
         setContentSize(hostingView.fittingSize)
 
         if let savedOrigin = Self.loadSavedOrigin() {
@@ -50,10 +46,6 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         setFrameOrigin(origin)
     }
 
-    /// Called by AppKit while the window is being dragged (via
-    /// `isMovableByWindowBackground`) and on any programmatic frame change,
-    /// keeping the panel fully on-screen without the user having to notice
-    /// any clamping.
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         guard let screen = screen ?? self.screen ?? NSScreen.main else { return frameRect }
         let visible = screen.visibleFrame
@@ -63,10 +55,6 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         return rect
     }
 
-    /// `windowDidMove` fires repeatedly while dragging; checking for a
-    /// released mouse button is how we tell a live drag update apart from
-    /// the final position once the user lets go, without a dedicated
-    /// "drag ended" delegate method.
     func windowDidMove(_ notification: Notification) {
         guard NSEvent.pressedMouseButtons == 0, !isSnapping else { return }
         if !snapToNearestCornerIfClose() {
@@ -74,9 +62,6 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         }
     }
 
-    /// Returns whether a snap animation was started — the caller only
-    /// persists the position immediately when it wasn't, since a snap
-    /// persists its own (different) final origin once the animation ends.
     @discardableResult
     private func snapToNearestCornerIfClose() -> Bool {
         guard let screen = screen ?? NSScreen.main else { return false }

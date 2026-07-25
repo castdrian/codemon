@@ -6,29 +6,20 @@ import KeyboardShortcuts
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private static let claudeDesktopBundleID = "com.anthropic.claudefordesktop"
-
     private var statusItem: NSStatusItem!
-    private let auth = CookieAuthService.shared
-    private lazy var usageStore = UsageStore(auth: auth)
+    private lazy var usageStore = UsageStore()
     private var floatingWindow: FloatingWidgetWindow?
     private var settingsWindowController: NSWindowController?
     private var cancellables = Set<AnyCancellable>()
-    private let appUpdater = AppUpdater(owner: "castdrian", repo: "claudemon")
+    private let appUpdater = AppUpdater(owner: "castdrian", repo: "codemon")
     private var appActivationObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "bolt.circle", accessibilityDescription: "claudemon")
-
+        statusItem.button?.image = NSImage(systemSymbolName: "bolt.circle", accessibilityDescription: "codemon")
         buildMenu()
 
-        usageStore.$snapshot
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.buildMenu() }
-            .store(in: &cancellables)
-
-        auth.$authState
+        usageStore.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.buildMenu() }
             .store(in: &cancellables)
@@ -46,14 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updateFloatingWidgetVisibility()
         }
 
-        SettingsStore.shared.$showWidgetOnlyWhenClaudeFocused
+        SettingsStore.shared.$showWidgetOnlyWhenProviderFocused
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.updateFloatingWidgetVisibility() }
             .store(in: &cancellables)
-
-        if auth.authState == .signedOut {
-            auth.beginSignIn()
-        }
 
         KeyboardShortcuts.onKeyUp(for: .toggleWidget) { [weak self] in
             self?.toggleFloatingWidget()
@@ -69,53 +56,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func buildMenu() {
         let menu = NSMenu()
 
-        if let snapshot = usageStore.snapshot {
-            menu.addItem(withTitle: "Session: \(Int((snapshot.session?.utilization ?? 0).rounded()))%", action: nil, keyEquivalent: "")
-            menu.addItem(withTitle: "Weekly: \(Int((snapshot.weekly?.utilization ?? 0).rounded()))%", action: nil, keyEquivalent: "")
-            if let percent = snapshot.credit?.percentUsed {
-                menu.addItem(withTitle: "Credits: \(Int(percent.rounded()))%", action: nil, keyEquivalent: "")
+        for providerStore in usageStore.providerStores {
+            if let snapshot = providerStore.snapshot {
+                menu.addItem(withTitle: "\(providerStore.provider.displayName) Session: \(Int((snapshot.session?.utilization ?? 0).rounded()))%", action: nil, keyEquivalent: "")
+                menu.addItem(withTitle: "\(providerStore.provider.displayName) Weekly: \(Int((snapshot.weekly?.utilization ?? 0).rounded()))%", action: nil, keyEquivalent: "")
+                if let percent = snapshot.credit?.percentUsed {
+                    menu.addItem(withTitle: "\(providerStore.provider.displayName) Credits: \(Int(percent.rounded()))%", action: nil, keyEquivalent: "")
+                }
             }
-            menu.addItem(.separator())
-        } else if let error = usageStore.lastError {
-            menu.addItem(withTitle: error, action: nil, keyEquivalent: "")
+        }
+
+        if !usageStore.providerStores.allSatisfy({ $0.snapshot == nil }) {
             menu.addItem(.separator())
         }
 
         menu.addItem(Self.item("Refresh Now", symbol: "arrow.clockwise", action: #selector(refreshNow), keyEquivalent: "r"))
         menu.addItem(.separator())
-
         let widgetItem = Self.item("Show Floating Widget", symbol: "rectangle.inset.filled", action: #selector(toggleFloatingWidget))
         widgetItem.state = SettingsStore.shared.showFloatingWidget ? .on : .off
         menu.addItem(widgetItem)
-
         menu.addItem(Self.item("Settings…", symbol: "gearshape", action: #selector(openSettings)))
         menu.addItem(Self.item("Check for Updates…", symbol: "arrow.down.circle", action: #selector(checkForUpdates)))
         menu.addItem(.separator())
 
-        switch auth.authState {
-        case .signedIn:
-            menu.addItem(Self.item("Sign Out", symbol: "person.crop.circle.badge.xmark", action: #selector(signOut)))
-        case .expired:
-            menu.addItem(Self.item("Sign In Again…", symbol: "person.crop.circle.badge.exclamationmark", action: #selector(signIn)))
-        case .signedOut:
-            menu.addItem(Self.item("Sign In…", symbol: "person.crop.circle.badge.plus", action: #selector(signIn)))
+        for providerStore in usageStore.providerStores {
+            let title: String
+            let symbol: String
+            switch providerStore.auth.authState {
+            case .signedIn:
+                title = "Sign Out of \(providerStore.provider.displayName)"
+                symbol = "person.crop.circle.badge.xmark"
+            case .expired:
+                title = "Sign In to \(providerStore.provider.displayName) Again…"
+                symbol = "person.crop.circle.badge.exclamationmark"
+            case .signedOut:
+                title = "Sign In to \(providerStore.provider.displayName)…"
+                symbol = "person.crop.circle.badge.plus"
+            }
+            let item = Self.item(title, symbol: symbol, action: #selector(toggleSignIn(_:)))
+            item.representedObject = providerStore.provider.rawValue
+            menu.addItem(item)
         }
 
         menu.addItem(.separator())
-        menu.addItem(Self.item("Support claudemon on Ko-fi…", symbol: "cup.and.saucer", action: #selector(openKofi)))
+        menu.addItem(Self.item("Support codemon on Ko-fi…", symbol: "cup.and.saucer", action: #selector(openKofi)))
         menu.addItem(.separator())
-        menu.addItem(Self.item("Quit claudemon", symbol: "power", action: #selector(quit), keyEquivalent: "q"))
+        menu.addItem(Self.item("Quit codemon", symbol: "power", action: #selector(quit), keyEquivalent: "q"))
 
-        for item in menu.items {
-            item.target = self
-        }
+        for item in menu.items { item.target = self }
         statusItem.menu = menu
     }
 
     private static func item(_ title: String, symbol: String, action: Selector, keyEquivalent: String = "") -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
-        item.image = image
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
         return item
     }
 
@@ -129,20 +123,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildMenu()
     }
 
-    /// The single place that decides whether the panel should be on screen —
-    /// driven by the master toggle, and (when enabled) by whether Claude
-    /// desktop is the frontmost app. Keeps the same window instance around
-    /// rather than recreating it, so a dragged/snapped position survives
-    /// being hidden and shown again.
     private func updateFloatingWidgetVisibility() {
         guard SettingsStore.shared.showFloatingWidget else {
             floatingWindow?.orderOut(nil)
             return
         }
 
-        if SettingsStore.shared.showWidgetOnlyWhenClaudeFocused {
-            let isClaudeFocused = NSWorkspace.shared.frontmostApplication?.bundleIdentifier == Self.claudeDesktopBundleID
-            setWidgetWindowVisible(isClaudeFocused)
+        if SettingsStore.shared.showWidgetOnlyWhenProviderFocused {
+            let activeBundleIdentifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+            let isProviderFocused = UsageProvider.allCases.contains { provider in
+                guard let activeBundleIdentifier else { return false }
+                return provider.desktopBundleIdentifiers.contains(activeBundleIdentifier)
+            }
+            setWidgetWindowVisible(isProviderFocused)
         } else {
             setWidgetWindowVisible(true)
         }
@@ -161,10 +154,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         if settingsWindowController == nil {
-            let view = SettingsView(usageStore: usageStore, auth: auth)
-            let hosting = NSHostingController(rootView: view)
+            let hosting = NSHostingController(rootView: SettingsView(usageStore: usageStore))
             let window = NSWindow(contentViewController: hosting)
-            window.title = "claudemon settings"
+            window.title = "codemon settings"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             settingsWindowController = NSWindowController(window: window)
@@ -173,12 +165,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func signIn() {
-        auth.beginSignIn()
-    }
-
-    @objc private func signOut() {
-        auth.signOut()
+    @objc private func toggleSignIn(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String, let provider = UsageProvider(rawValue: rawValue), let providerStore = usageStore.providerStores.first(where: { $0.provider == provider }) else { return }
+        if providerStore.auth.authState == .signedIn {
+            providerStore.auth.signOut()
+        } else {
+            providerStore.auth.beginSignIn()
+        }
     }
 
     @objc private func openKofi() {
@@ -191,16 +184,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleUpdaterState(_ state: AppUpdater.UpdateState) {
         guard case .downloaded(let release, _, let bundle) = state else { return }
-
         let alert = NSAlert()
         alert.messageText = "Update Available"
-        alert.informativeText = "claudemon \(release.tagName) is ready to install."
+        alert.informativeText = "codemon \(release.tagName) is ready to install."
         alert.addButton(withTitle: "Install & Relaunch")
         alert.addButton(withTitle: "Later")
         NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn {
-            appUpdater.install(bundle)
-        }
+        if alert.runModal() == .alertFirstButtonReturn { appUpdater.install(bundle) }
     }
 
     @objc private func quit() {

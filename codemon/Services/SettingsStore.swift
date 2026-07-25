@@ -7,8 +7,8 @@ final class SettingsStore: ObservableObject {
     @Published var showFloatingWidget: Bool {
         didSet { defaults.set(showFloatingWidget, forKey: "showFloatingWidget") }
     }
-    @Published var showWidgetOnlyWhenClaudeFocused: Bool {
-        didSet { defaults.set(showWidgetOnlyWhenClaudeFocused, forKey: "showWidgetOnlyWhenClaudeFocused") }
+    @Published var showWidgetOnlyWhenProviderFocused: Bool {
+        didSet { defaults.set(showWidgetOnlyWhenProviderFocused, forKey: "showWidgetOnlyWhenProviderFocused") }
     }
     @Published var refreshIntervalMinutes: Double {
         didSet { defaults.set(refreshIntervalMinutes, forKey: "refreshIntervalMinutes") }
@@ -21,7 +21,7 @@ final class SettingsStore: ObservableObject {
 
     private init() {
         showFloatingWidget = defaults.object(forKey: "showFloatingWidget") as? Bool ?? true
-        showWidgetOnlyWhenClaudeFocused = defaults.object(forKey: "showWidgetOnlyWhenClaudeFocused") as? Bool ?? false
+        showWidgetOnlyWhenProviderFocused = defaults.object(forKey: "showWidgetOnlyWhenProviderFocused") as? Bool ?? false
         refreshIntervalMinutes = defaults.object(forKey: "refreshIntervalMinutes") as? Double ?? 2
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
@@ -39,7 +39,7 @@ final class SettingsStore: ObservableObject {
                 break
             }
         } catch {
-            NSLog("claudemon: launch at login toggle failed: \(error)")
+            NSLog("codemon: launch at login toggle failed: \(error)")
         }
     }
 }

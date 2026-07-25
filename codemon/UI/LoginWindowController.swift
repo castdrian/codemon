@@ -5,11 +5,13 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     private var window: NSWindow!
     private var webView: WKWebView!
     private var linkField: NSTextField!
+    private let provider: UsageProvider
     private let onCaptured: (String) -> Void
     private var pollTimer: Timer?
     private var lastHandledClipboard: String?
 
-    init(dataStore: WKWebsiteDataStore, onCaptured: @escaping (String) -> Void) {
+    init(provider: UsageProvider, dataStore: WKWebsiteDataStore, onCaptured: @escaping (String) -> Void) {
+        self.provider = provider
         self.onCaptured = onCaptured
         super.init()
         setUp(dataStore: dataStore)
@@ -24,14 +26,13 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         webView.uiDelegate = self
         webView.translatesAutoresizingMaskIntoConstraints = false
 
-        let instructions = NSTextField(wrappingLabelWithString:
-            "Claude emails a sign-in link. Pasting it below is optional — you can also just click it normally; Claude will show a short code to enter here instead. Once signed in, macOS will ask permission to store your session in the Keychain — that's expected, claudemon uses it to keep you signed in.")
+        let instructions = NSTextField(wrappingLabelWithString: "Sign in to \(provider.displayName). codemon securely stores this provider session in your Keychain so it can refresh your usage.")
         instructions.font = .systemFont(ofSize: 11)
         instructions.textColor = .secondaryLabelColor
         instructions.translatesAutoresizingMaskIntoConstraints = false
 
         linkField = NSTextField()
-        linkField.placeholderString = "Paste sign-in link here…"
+        linkField.placeholderString = "Paste a \(provider.displayName) sign-in link…"
         linkField.target = self
         linkField.action = #selector(submitLink)
         linkField.translatesAutoresizingMaskIntoConstraints = false
@@ -59,27 +60,21 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
             instructions.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
             instructions.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
             instructions.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
-
             linkRow.topAnchor.constraint(equalTo: instructions.bottomAnchor, constant: 8),
             linkRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
             linkRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
             goButton.widthAnchor.constraint(equalToConstant: 60),
-
             separator.topAnchor.constraint(equalTo: linkRow.bottomAnchor, constant: 10),
             separator.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-
             webView.topAnchor.constraint(equalTo: separator.bottomAnchor),
             webView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             webView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
 
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 720),
-                           styleMask: [.titled, .closable, .miniaturizable],
-                           backing: .buffered,
-                           defer: false)
-        window.title = "Sign in to Claude"
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 720), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window.title = "Sign in to \(provider.displayName)"
         window.contentView = container
         window.center()
         window.isReleasedWhenClosed = false
@@ -87,7 +82,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     }
 
     func showWindow() {
-        webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
+        webView.load(URLRequest(url: provider.loginURL))
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         startPolling()
@@ -101,8 +96,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
 
     @objc private func submitLink() {
         let text = linkField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: text), url.scheme == "https",
-              let host = url.host, isClaudeHost(host) else {
+        guard let url = URL(string: text), url.scheme == "https", let host = url.host, isProviderHost(host) else {
             NSSound.beep()
             return
         }
@@ -110,8 +104,8 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         linkField.stringValue = ""
     }
 
-    private func isClaudeHost(_ host: String) -> Bool {
-        host.hasSuffix("claude.ai") || host.hasSuffix("anthropic.com")
+    private func isProviderHost(_ host: String) -> Bool {
+        provider.cookieDomains.contains { host.hasSuffix($0) }
     }
 
     private func startPolling() {
@@ -129,25 +123,28 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     private func checkCookies() {
         webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
             guard let self else { return }
-            let claudeCookies = cookies.filter { $0.domain.contains("claude.ai") }
-            guard claudeCookies.contains(where: { $0.name == "sessionKey" }) else { return }
-            let header = claudeCookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+            let providerCookies = cookies.filter { cookie in
+                self.provider.cookieDomains.contains { cookie.domain.contains($0) }
+            }
+            guard self.hasAuthenticatedCookie(providerCookies) else { return }
+            let header = providerCookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
             DispatchQueue.main.async {
                 self.onCaptured(header)
             }
         }
     }
 
-    /// Picks up a copied sign-in link automatically when the window regains
-    /// focus, so pasting is usually unnecessary — the field still works as a
-    /// manual fallback.
+    private func hasAuthenticatedCookie(_ cookies: [HTTPCookie]) -> Bool {
+        switch provider {
+        case .claude:
+            return cookies.contains { $0.name == "sessionKey" }
+        case .codex:
+            return cookies.contains { $0.name.lowercased().contains("session") || $0.name.lowercased().contains("auth") }
+        }
+    }
+
     private func checkClipboardForLink() {
-        guard let text = NSPasteboard.general.string(forType: .string),
-              text != lastHandledClipboard,
-              let url = URL(string: text),
-              url.scheme == "https",
-              let host = url.host, isClaudeHost(host)
-        else { return }
+        guard let text = NSPasteboard.general.string(forType: .string), text != lastHandledClipboard, let url = URL(string: text), url.scheme == "https", let host = url.host, isProviderHost(host) else { return }
         lastHandledClipboard = text
         linkField.stringValue = text
     }

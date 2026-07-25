@@ -3,29 +3,19 @@ import KeyboardShortcuts
 
 struct SettingsView: View {
     @ObservedObject var usageStore: UsageStore
-    @ObservedObject var auth: CookieAuthService
     @ObservedObject private var prefs = SettingsStore.shared
 
     var body: some View {
         Form {
-            Section("Account") {
-                HStack {
-                    Text(statusLabel)
-                        .foregroundStyle(statusColor)
-                    Spacer()
-                    Button(auth.authState == .signedIn ? "Sign Out" : "Sign In…") {
-                        if auth.authState == .signedIn {
-                            auth.signOut()
-                        } else {
-                            auth.beginSignIn()
-                        }
-                    }
+            Section("Accounts") {
+                ForEach(usageStore.providerStores) { providerStore in
+                    ProviderAccountRow(providerStore: providerStore)
                 }
             }
 
             Section("Widget") {
                 Toggle("Show floating widget", isOn: $prefs.showFloatingWidget)
-                Toggle("Only when Claude is focused", isOn: $prefs.showWidgetOnlyWhenClaudeFocused)
+                Toggle("Only when Claude or Codex is focused", isOn: $prefs.showWidgetOnlyWhenProviderFocused)
                     .disabled(!prefs.showFloatingWidget)
                 Toggle("Launch at login", isOn: $prefs.launchAtLogin)
                 KeyboardShortcuts.Recorder("Toggle widget:", name: .toggleWidget)
@@ -47,18 +37,40 @@ struct SettingsView: View {
                 }
             }
 
-            if let error = usageStore.lastError {
-                Section {
-                    Text(error).foregroundStyle(.red)
+            ForEach(usageStore.providerStores.filter { $0.lastError != nil }) { providerStore in
+                if let error = providerStore.lastError {
+                    Section(providerStore.provider.displayName) {
+                        Text(error).foregroundStyle(.red)
+                    }
                 }
             }
         }
         .padding(20)
-        .frame(width: 360)
+        .frame(width: 380)
+    }
+}
+
+private struct ProviderAccountRow: View {
+    @ObservedObject var providerStore: ProviderUsageStore
+
+    var body: some View {
+        HStack {
+            Text(providerStore.provider.displayName)
+            Spacer()
+            Text(statusLabel)
+                .foregroundStyle(statusColor)
+            Button(providerStore.auth.authState == .signedIn ? "Sign Out" : "Sign In…") {
+                if providerStore.auth.authState == .signedIn {
+                    providerStore.auth.signOut()
+                } else {
+                    providerStore.auth.beginSignIn()
+                }
+            }
+        }
     }
 
     private var statusLabel: String {
-        switch auth.authState {
+        switch providerStore.auth.authState {
         case .signedIn: return "Signed in"
         case .expired: return "Session expired"
         case .signedOut: return "Not signed in"
@@ -66,7 +78,7 @@ struct SettingsView: View {
     }
 
     private var statusColor: Color {
-        switch auth.authState {
+        switch providerStore.auth.authState {
         case .signedIn: return .green
         case .expired: return .orange
         case .signedOut: return .secondary

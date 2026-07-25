@@ -4,11 +4,10 @@ struct FloatingWidgetView: View {
     @ObservedObject var usageStore: UsageStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            usageRow(title: "Session", window: usageStore.snapshot?.session)
-            usageRow(title: "Weekly", window: usageStore.snapshot?.weekly)
-            creditRow(usageStore.snapshot?.credit)
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(usageStore.providerStores) { providerStore in
+                ProviderUsageView(providerStore: providerStore)
+            }
         }
         .padding(14)
         .frame(width: 216, alignment: .leading)
@@ -18,20 +17,31 @@ struct FloatingWidgetView: View {
                 .strokeBorder(Color.white.opacity(0.08))
         )
     }
+}
 
-    @ViewBuilder
+private struct ProviderUsageView: View {
+    @ObservedObject var providerStore: ProviderUsageStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header
+            usageRow(title: "Session", window: providerStore.snapshot?.session)
+            usageRow(title: "Weekly", window: providerStore.snapshot?.weekly)
+            if providerStore.provider == .claude {
+                creditRow(providerStore.snapshot?.credit)
+            }
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
-                Text(usageStore.accountInfo?.displayName ?? "claudemon")
+                Text(providerStore.provider.displayName)
                     .font(.system(size: 12, weight: .semibold))
+                Text("· \(providerStore.accountInfo?.planLabel ?? "Not signed in")")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
-                if let plan = usageStore.accountInfo?.planLabel {
-                    Text("· \(plan)")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
             Divider()
         }
@@ -42,19 +52,15 @@ struct FloatingWidgetView: View {
         let value = window?.utilization
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold))
+                Text(title).font(.system(size: 10, weight: .semibold))
                 Spacer()
                 Text(value.map { "\(Int($0.rounded()))%" } ?? "—")
                     .font(.system(size: 10, weight: .medium))
                     .monospacedDigit()
             }
-            .foregroundStyle(.primary)
-
-            UsageBar(percent: value ?? 0, color: Self.claudeColor(for: value ?? 0))
-
+            UsageBar(percent: value ?? 0, color: usageColor(for: value ?? 0))
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text(Self.resetLabel(window?.resetsAt, now: context.date))
+                Text(resetLabel(window?.resetsAt, now: context.date))
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             }
@@ -66,51 +72,35 @@ struct FloatingWidgetView: View {
         let percent = credit?.percentUsed
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Credits")
-                    .font(.system(size: 10, weight: .semibold))
+                Text("Credits").font(.system(size: 10, weight: .semibold))
                 Spacer()
-                Text(Self.creditValueLabel(credit))
-                    .font(.system(size: 10, weight: .medium))
-                    .monospacedDigit()
+                Text(creditValueLabel(credit)).font(.system(size: 10, weight: .medium)).monospacedDigit()
             }
-            .foregroundStyle(.primary)
-
-            UsageBar(percent: percent ?? 0, color: Self.claudeColor(for: percent ?? 0))
-
-            Text(" ")
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
+            UsageBar(percent: percent ?? 0, color: usageColor(for: percent ?? 0))
         }
     }
 
-    private static func creditValueLabel(_ credit: CreditUsage?) -> String {
+    private func creditValueLabel(_ credit: CreditUsage?) -> String {
         guard let credit else { return "—" }
-        if let remaining = credit.remaining {
-            return "\(formatCurrency(remaining, credit: credit)) left"
-        }
-        if let percent = credit.percentUsed {
-            return "\(Int(percent.rounded()))%"
-        }
+        if let remaining = credit.remaining { return "\(formatCurrency(remaining, credit: credit)) left" }
+        if let percent = credit.percentUsed { return "\(Int(percent.rounded()))%" }
         return "—"
     }
 
-    private static func formatCurrency(_ minorUnits: Double, credit: CreditUsage) -> String {
+    private func formatCurrency(_ minorUnits: Double, credit: CreditUsage) -> String {
         let value = minorUnits / pow(10, Double(credit.decimalPlaces))
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        if let currency = credit.currency {
-            formatter.currencyCode = currency
-        }
+        formatter.currencyCode = credit.currency
         formatter.minimumFractionDigits = credit.decimalPlaces
         formatter.maximumFractionDigits = credit.decimalPlaces
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 
-    private static func resetLabel(_ resetsAt: Date?, now: Date) -> String {
+    private func resetLabel(_ resetsAt: Date?, now: Date) -> String {
         guard let resetsAt else { return " " }
         let interval = resetsAt.timeIntervalSince(now)
         guard interval > 0 else { return "resetting…" }
-
         let hours = Int(interval) / 3600
         let minutes = (Int(interval) % 3600) / 60
         if hours > 0 { return "resets in \(hours)h \(minutes)m" }
@@ -118,7 +108,7 @@ struct FloatingWidgetView: View {
         return "resets in \(Int(interval))s"
     }
 
-    private static func claudeColor(for percent: Double) -> Color {
+    private func usageColor(for percent: Double) -> Color {
         switch percent {
         case ..<70: return Color(red: 0.204, green: 0.478, blue: 0.965)
         case ..<90: return Color(red: 0.988, green: 0.749, blue: 0.176)
@@ -127,8 +117,6 @@ struct FloatingWidgetView: View {
     }
 }
 
-/// `ProgressView(.linear)` ignores `.tint()` on macOS and always renders the
-/// system gray track, so the fill is drawn manually here instead.
 private struct UsageBar: View {
     let percent: Double
     let color: Color
@@ -136,11 +124,8 @@ private struct UsageBar: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.primary.opacity(0.12))
-                Capsule()
-                    .fill(color)
-                    .frame(width: geometry.size.width * min(max(percent, 0), 100) / 100)
+                Capsule().fill(Color.primary.opacity(0.12))
+                Capsule().fill(color).frame(width: geometry.size.width * min(max(percent, 0), 100) / 100)
             }
         }
         .frame(height: 5)
