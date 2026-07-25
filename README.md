@@ -5,6 +5,7 @@ Menu bar app that tracks your Claude and Codex usage — session, weekly, and Cl
 <p align="center">
   <img src="https://adriancastro.dev/rel05geam3lp.png" alt="codemon screenshot 1" width="260" />
   <img src="https://adriancastro.dev/io8jo6y8lkjj.png" alt="codemon screenshot 2" width="260" />
+  <img src="https://adriancastro.dev/sym94u6buj56.png" alt="codemon screenshot 3" width="260" />
 </p>
 
 ## Features
