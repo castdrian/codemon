@@ -1,6 +1,10 @@
 import AppKit
 import WebKit
 
+@objc private protocol ExtensibleSSOPreferences {
+    func _setExtensibleSSOEnabled(_ enabled: Bool)
+}
+
 final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
     private var window: NSWindow!
     private var webView: WKWebView!
@@ -42,6 +46,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         configuration.userContentController.addUserScript(
             WKUserScript(source: Self.disableWebAuthnScriptSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
+        Self.disableExtensibleSSO(on: configuration.preferences)
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
@@ -154,6 +159,12 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
                 self.onCaptured(header)
             }
         }
+    }
+
+    private static func disableExtensibleSSO(on preferences: WKPreferences) {
+        let selector = NSSelectorFromString("_setExtensibleSSOEnabled:")
+        guard preferences.responds(to: selector) else { return }
+        unsafeBitCast(preferences, to: ExtensibleSSOPreferences.self)._setExtensibleSSOEnabled(false)
     }
 
     private func hasAuthenticatedCookie(_ cookies: [HTTPCookie]) -> Bool {

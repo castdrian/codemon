@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.4]
+
+- Fix the app crashing outright when clicking "Continue with Apple" in the sign-in window. WebKit routes Apple ID authorization to the system's extensible SSO (AppSSO) extension, which presents Sign in with Apple as a native out-of-process sheet. codemon ships ad-hoc signed with no team identifier, so that sheet can't be vended to it and its presentation throws an uncaught exception, aborting the process. The sign-in window now opts out of extensible SSO, so Apple ID stays an ordinary web sign-in inside the window — which is also what the original "Touch ID prompt that never finishes" was: the same native sheet, failing quietly instead of loudly
+
 ## [1.2.3]
 
 - Fix the Codex sign-in window opening blank and closing again straight away, and the menu being stuck on "Sign In to Codex Again…". A dead `__Secure-next-auth.session-token` left in the shared web data store by the earlier broken captures was matched and re-captured the instant the window loaded, so every sign-in attempt "succeeded" with an already-invalid session, and the resulting 401 flipped the account straight back to expired. Starting a sign-in now clears that provider's stored web data first, so the page loads from a clean signed-out state
