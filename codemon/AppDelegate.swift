@@ -108,13 +108,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch peak {
         case .some(let value) where value >= 90: symbol = "gauge.high"
         case .some(let value) where value >= 70: symbol = "gauge.medium"
-        case .some: symbol = "gauge.low"
-        case nil: symbol = "speedometer"
+        default: symbol = "gauge.low"
         }
 
         let description = peak.map { "codemon — \(Int($0.rounded()))% used" } ?? "codemon"
         statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: description)
-            ?? NSImage(systemSymbolName: "speedometer", accessibilityDescription: description)
+            ?? NSImage(systemSymbolName: "gauge", accessibilityDescription: description)
     }
 
     private static func item(_ title: String, symbol: String, action: Selector, keyEquivalent: String = "") -> NSMenuItem {
