@@ -1,10 +1,6 @@
 import AppKit
 import WebKit
 
-@objc private protocol ExtensibleSSOPreferences {
-    func _setExtensibleSSOEnabled(_ enabled: Bool)
-}
-
 final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
     private var window: NSWindow!
     private var webView: WKWebView!
@@ -13,6 +9,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     private let onCaptured: (String) -> Void
     private var pollTimer: Timer?
     private var lastHandledClipboard: String?
+    private var lastAttemptedHeader: String?
     private var instructions: NSTextField!
 
     private static let disableWebAuthnScriptSource = """
@@ -46,8 +43,6 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         configuration.userContentController.addUserScript(
             WKUserScript(source: Self.disableWebAuthnScriptSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
-        Self.disableExtensibleSSO(on: configuration.preferences)
-
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -156,15 +151,11 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
             guard self.hasAuthenticatedCookie(providerCookies) else { return }
             let header = providerCookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
             DispatchQueue.main.async {
+                guard header != self.lastAttemptedHeader else { return }
+                self.lastAttemptedHeader = header
                 self.onCaptured(header)
             }
         }
-    }
-
-    private static func disableExtensibleSSO(on preferences: WKPreferences) {
-        let selector = NSSelectorFromString("_setExtensibleSSOEnabled:")
-        guard preferences.responds(to: selector) else { return }
-        unsafeBitCast(preferences, to: ExtensibleSSOPreferences.self)._setExtensibleSSOEnabled(false)
     }
 
     private func hasAuthenticatedCookie(_ cookies: [HTTPCookie]) -> Bool {
@@ -172,7 +163,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         case .claude:
             return cookies.contains { $0.name == "sessionKey" }
         case .codex:
-            return cookies.contains { $0.name.lowercased().hasSuffix("session-token") }
+            return cookies.contains { $0.name.lowercased().contains("session-token") }
         }
     }
 

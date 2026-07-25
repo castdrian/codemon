@@ -10,8 +10,6 @@ final class ProviderAuthService: ObservableObject {
     let provider: UsageProvider
     let websiteDataStore = WKWebsiteDataStore.default()
     private var loginWindowController: LoginWindowController?
-    private var validationTask: Task<Void, Never>?
-    private var rejectedHeaders: Set<String> = []
 
     init(provider: UsageProvider) {
         self.provider = provider
@@ -26,7 +24,6 @@ final class ProviderAuthService: ObservableObject {
                 self?.handleCaptured(cookieHeader: header)
             }
         }
-        rejectedHeaders.removeAll()
         clearProviderWebsiteData { [weak self] in
             self?.loginWindowController?.showWindow()
         }
@@ -57,36 +54,10 @@ final class ProviderAuthService: ObservableObject {
     }
 
     private func handleCaptured(cookieHeader header: String) {
-        guard validationTask == nil, !rejectedHeaders.contains(header) else { return }
-        validationTask = Task { [weak self] in
-            guard let self else { return }
-            let accepted = await Self.acceptsSession(provider: provider, cookieHeader: header)
-            validationTask = nil
-            guard accepted else {
-                rejectedHeaders.insert(header)
-                return
-            }
-            KeychainStore.save(header, account: "\(provider.rawValue).cookie")
-            cookieHeader = header
-            authState = .signedIn
-            loginWindowController?.close()
-            loginWindowController = nil
-        }
-    }
-
-    private static func acceptsSession(provider: UsageProvider, cookieHeader: String) async -> Bool {
-        do {
-            switch provider {
-            case .claude:
-                _ = try await ClaudeUsageAPIClient().fetchBootstrap(cookieHeader: cookieHeader)
-            case .codex:
-                _ = try await CodexUsageAPIClient().fetchUsage(cookieHeader: cookieHeader)
-            }
-            return true
-        } catch UsageAPIError.unauthorized {
-            return false
-        } catch {
-            return true
-        }
+        KeychainStore.save(header, account: "\(provider.rawValue).cookie")
+        cookieHeader = header
+        authState = .signedIn
+        loginWindowController?.close()
+        loginWindowController = nil
     }
 }

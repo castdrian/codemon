@@ -1,8 +1,14 @@
 # Changelog
 
+## [1.2.5]
+
+- Bring back Sign in with Apple's Touch ID prompt. 1.2.4 turned off WebKit's extensible SSO to stop a crash, which also removed the native Apple sign-in sheet — that is why the prompt disappeared on release builds while local 1.2.3 builds still showed it
+- Fix sign-in completing in the browser window but never activating in codemon: the window would land on chatgpt.com and just sit there. 1.2.3 had started gating capture on a live API call, and Codex's usage endpoint answers 401 to a cookie-only request no matter how good the session is, so a valid sign-in could never be accepted. Capture no longer waits on that call
+- Recognise Codex session cookies whether or not they are split into chunks
+
 ## [1.2.4]
 
-- Fix the app crashing outright when clicking "Continue with Apple" in the sign-in window. WebKit routes Apple ID authorization to the system's extensible SSO (AppSSO) extension, which presents Sign in with Apple as a native out-of-process sheet. codemon ships ad-hoc signed with no team identifier, so that sheet can't be vended to it and its presentation throws an uncaught exception, aborting the process. The sign-in window now opts out of extensible SSO, so Apple ID stays an ordinary web sign-in inside the window — which is also what the original "Touch ID prompt that never finishes" was: the same native sheet, failing quietly instead of loudly
+- Fix the app crashing outright when clicking "Continue with Apple" in the sign-in window. WebKit hands Apple ID authorization to the system's extensible SSO (AppSSO) extension, which presents Sign in with Apple as a native out-of-process sheet, and presenting that sheet threw an uncaught exception that aborted the process. The sign-in window opts out of extensible SSO so Apple ID stays an ordinary web sign-in (reverted in 1.2.5, which restores the native prompt)
 
 ## [1.2.3]
 
