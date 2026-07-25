@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.5]
+
+- Treat "no credits in use" the same way for both providers: a dash and an empty bar. Codex previously turned that state into a red "Out of credits" bar while Claude showed a dash for the very same situation, which read as two different problems rather than one shared idle state
+- Derive Claude's credit bar from the spend balance when no monthly limit is set, so a topped-up balance shows what is left instead of falling back to a dash
+
 ## [1.3.4]
 
 - Revert 1.3.3. The Codex weekly window does report usage consumed after all, so inverting it painted a freshly reset week as fully spent and red. Codex's own display counts the same allowance down from 100%, which is the inverse of the number the API hands out

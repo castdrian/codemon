@@ -56,11 +56,6 @@ struct CreditUsage: Equatable {
     var currency: String?
     var decimalPlaces: Int
     var isUnlimited: Bool = false
-
-    var isExhausted: Bool {
-        guard !isUnlimited, let remaining else { return false }
-        return remaining <= 0
-    }
 }
 
 struct UsageSnapshot: Equatable {

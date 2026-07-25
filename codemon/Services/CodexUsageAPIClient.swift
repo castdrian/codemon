@@ -55,17 +55,20 @@ struct CodexUsageAPIClient {
 
     private func creditUsage(_ entry: [String: Any]?) -> CreditUsage? {
         guard let entry else { return nil }
-        let balance = number(entry["balance"])
         let unlimited = entry["unlimited"] as? Bool ?? false
-        guard unlimited || balance != nil else { return nil }
+        if unlimited {
+            return CreditUsage(remaining: nil, limit: nil, used: nil, percentUsed: nil, currency: "USD", decimalPlaces: 2, isUnlimited: true)
+        }
+
+        guard entry["has_credits"] as? Bool == true, let balance = number(entry["balance"]), balance > 0 else { return nil }
         return CreditUsage(
-            remaining: balance.map { $0 * 100 },
+            remaining: balance * 100,
             limit: nil,
             used: nil,
             percentUsed: nil,
             currency: "USD",
             decimalPlaces: 2,
-            isUnlimited: unlimited
+            isUnlimited: false
         )
     }
 

@@ -97,25 +97,44 @@ struct ClaudeUsageAPIClient {
     }
 
     private static func parseCredit(_ json: [String: Any], numberParser number: (Any?) -> Double?) -> CreditUsage? {
-        guard let entry = json["extra_usage"] as? [String: Any],
-              entry["is_enabled"] as? Bool == true else { return nil }
+        guard let entry = json["extra_usage"] as? [String: Any] else { return nil }
 
         let used = number(entry["used_credits"])
         let limit = number(entry["monthly_limit"])
-        guard used != nil || limit != nil else { return nil }
-
-        let percent = number(entry["utilization"])
-        let remaining = limit.flatMap { l in used.map { l - $0 } }
         let currency = entry["currency"] as? String
         let decimalPlaces = (entry["decimal_places"] as? Int) ?? 2
 
+        guard entry["is_enabled"] as? Bool == true else { return nil }
+        guard used != nil || limit != nil else { return nil }
+
+        if limit == nil, let balance = spendBalance(json, numberParser: number) {
+            let spent = used ?? 0
+            let total = spent + balance
+            return CreditUsage(
+                remaining: balance,
+                limit: nil,
+                used: used,
+                percentUsed: total > 0 ? (spent / total) * 100 : 0,
+                currency: currency,
+                decimalPlaces: decimalPlaces
+            )
+        }
+
         return CreditUsage(
-            remaining: remaining,
+            remaining: limit.flatMap { l in used.map { l - $0 } },
             limit: limit,
             used: used,
-            percentUsed: percent,
+            percentUsed: number(entry["utilization"]),
             currency: currency,
             decimalPlaces: decimalPlaces
         )
+    }
+
+    private static func spendBalance(_ json: [String: Any], numberParser number: (Any?) -> Double?) -> Double? {
+        guard let spend = json["spend"] as? [String: Any] else { return nil }
+        if let balance = spend["balance"] as? [String: Any] {
+            return number(balance["amount_minor"])
+        }
+        return number(spend["balance"])
     }
 }

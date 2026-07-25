@@ -72,8 +72,7 @@ struct FloatingWidgetView: View {
 
     @ViewBuilder
     private func creditRow(_ credit: CreditUsage?) -> some View {
-        let exhausted = credit?.isExhausted ?? false
-        let percent = exhausted ? 100 : (credit?.percentUsed ?? 0)
+        let percent = credit?.percentUsed ?? 0
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Credits")
@@ -96,7 +95,6 @@ struct FloatingWidgetView: View {
     private static func creditValueLabel(_ credit: CreditUsage?) -> String {
         guard let credit else { return "—" }
         if credit.isUnlimited { return "Unlimited" }
-        if credit.isExhausted { return "Out of credits" }
         if let remaining = credit.remaining {
             return "\(formatCurrency(remaining, credit: credit)) left"
         }
