@@ -25,8 +25,9 @@ struct FloatingWidgetView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
-                Text(providerStore.provider.displayName)
+                Text(providerStore.accountInfo?.displayName ?? providerStore.provider.displayName)
                     .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
                 Text("· \(providerStore.accountInfo?.planLabel ?? "Not signed in")")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)

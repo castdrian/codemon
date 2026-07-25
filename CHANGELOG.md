@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.1]
+
+- Fix the Codex sign-in window closing immediately after it opens — `chatgpt.com` sets CSRF/PKCE cookies (e.g. `authjs.csrf-token`) as soon as the login page loads, and the old check treated any cookie with "auth" or "session" in its name as a signed-in session, capturing and closing the window before the user could sign in. Now only the actual `*session-token` cookie counts
+- Fix the floating widget header showing the literal provider name ("Claude · Claude Pro") instead of the signed-in account's display name
+
 ## [1.2.0]
 
 - Give the floating widget one overlay per coding client again (Claude and Codex each get their own panel with an independent saved position) instead of a single merged widget

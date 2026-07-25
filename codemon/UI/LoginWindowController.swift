@@ -142,7 +142,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         case .claude:
             return cookies.contains { $0.name == "sessionKey" }
         case .codex:
-            return cookies.contains { $0.name.lowercased().contains("session") || $0.name.lowercased().contains("auth") }
+            return cookies.contains { $0.name.lowercased().hasSuffix("session-token") }
         }
     }
 
