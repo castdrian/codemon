@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.3]
+
+- Fix the Codex sign-in window opening blank and closing again straight away, and the menu being stuck on "Sign In to Codex Again…". A dead `__Secure-next-auth.session-token` left in the shared web data store by the earlier broken captures was matched and re-captured the instant the window loaded, so every sign-in attempt "succeeded" with an already-invalid session, and the resulting 401 flipped the account straight back to expired. Starting a sign-in now clears that provider's stored web data first, so the page loads from a clean signed-out state
+- Only accept a captured session once it actually works — the sign-in window now stays open until the captured cookies return a real response from the provider's API, instead of closing on the first cookie that merely looks like a session
+- Stop the passkey/Touch ID option being offered in the sign-in window at all — `PublicKeyCredential` and `navigator.credentials` are now removed outright rather than only having their methods stubbed, so the page falls back to password sign-in instead of a prompt the embedded window can never complete
+
 ## [1.2.2]
 
 - Fix Codex sign-in failing with "Authentication Error — client_id_not_found_in_session" — 1.2.1's fix for the Apple ID Touch ID hang opened Apple's auth pages in the system browser, but the OAuth session state (`client_id`, PKCE verifier, etc.) lives in the embedded sign-in window's own isolated cookie store, so the callback landed in a browser with no matching session and failed for every sign-in, not just Apple ID. Reverted that handoff. Touch ID/passkey prompts are now prevented at the source instead: the sign-in window disables `navigator.credentials`/`PublicKeyCredential` via an injected script, so Apple's page falls back to password entry within the same window and session

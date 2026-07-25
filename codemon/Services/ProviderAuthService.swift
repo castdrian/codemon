@@ -10,6 +10,8 @@ final class ProviderAuthService: ObservableObject {
     let provider: UsageProvider
     let websiteDataStore = WKWebsiteDataStore.default()
     private var loginWindowController: LoginWindowController?
+    private var validationTask: Task<Void, Never>?
+    private var rejectedHeaders: Set<String> = []
 
     init(provider: UsageProvider) {
         self.provider = provider
@@ -24,20 +26,28 @@ final class ProviderAuthService: ObservableObject {
                 self?.handleCaptured(cookieHeader: header)
             }
         }
-        loginWindowController?.showWindow()
+        rejectedHeaders.removeAll()
+        clearProviderWebsiteData { [weak self] in
+            self?.loginWindowController?.showWindow()
+        }
     }
 
     func signOut() {
         KeychainStore.delete(account: "\(provider.rawValue).cookie")
         cookieHeader = nil
         authState = .signedOut
+        clearProviderWebsiteData {}
+    }
 
+    private func clearProviderWebsiteData(completion: @escaping () -> Void) {
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         websiteDataStore.fetchDataRecords(ofTypes: types) { [websiteDataStore, provider] records in
             let matchingRecords = records.filter { record in
                 provider.cookieDomains.contains { record.displayName.contains($0) }
             }
-            websiteDataStore.removeData(ofTypes: types, for: matchingRecords) {}
+            websiteDataStore.removeData(ofTypes: types, for: matchingRecords) {
+                DispatchQueue.main.async(execute: completion)
+            }
         }
     }
 
@@ -47,10 +57,36 @@ final class ProviderAuthService: ObservableObject {
     }
 
     private func handleCaptured(cookieHeader header: String) {
-        KeychainStore.save(header, account: "\(provider.rawValue).cookie")
-        cookieHeader = header
-        authState = .signedIn
-        loginWindowController?.close()
-        loginWindowController = nil
+        guard validationTask == nil, !rejectedHeaders.contains(header) else { return }
+        validationTask = Task { [weak self] in
+            guard let self else { return }
+            let accepted = await Self.acceptsSession(provider: provider, cookieHeader: header)
+            validationTask = nil
+            guard accepted else {
+                rejectedHeaders.insert(header)
+                return
+            }
+            KeychainStore.save(header, account: "\(provider.rawValue).cookie")
+            cookieHeader = header
+            authState = .signedIn
+            loginWindowController?.close()
+            loginWindowController = nil
+        }
+    }
+
+    private static func acceptsSession(provider: UsageProvider, cookieHeader: String) async -> Bool {
+        do {
+            switch provider {
+            case .claude:
+                _ = try await ClaudeUsageAPIClient().fetchBootstrap(cookieHeader: cookieHeader)
+            case .codex:
+                _ = try await CodexUsageAPIClient().fetchUsage(cookieHeader: cookieHeader)
+            }
+            return true
+        } catch UsageAPIError.unauthorized {
+            return false
+        } catch {
+            return true
+        }
     }
 }

@@ -13,14 +13,19 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
 
     private static let disableWebAuthnScriptSource = """
     (function () {
-        if (window.PublicKeyCredential) {
+        try {
             Object.defineProperty(window, 'PublicKeyCredential', { value: undefined, configurable: true });
-        }
-        if (window.navigator && window.navigator.credentials) {
-            var reject = function () { return Promise.reject(new DOMException('WebAuthn is not available', 'NotSupportedError')); };
-            window.navigator.credentials.get = reject;
-            window.navigator.credentials.create = reject;
-        }
+        } catch (e) {}
+        try {
+            Object.defineProperty(Navigator.prototype, 'credentials', { value: undefined, configurable: true });
+        } catch (e) {}
+        try {
+            if (window.navigator && window.navigator.credentials) {
+                var reject = function () { return Promise.reject(new DOMException('WebAuthn is not available', 'NotSupportedError')); };
+                window.navigator.credentials.get = reject;
+                window.navigator.credentials.create = reject;
+            }
+        } catch (e) {}
     })();
     """
 
