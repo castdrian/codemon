@@ -45,6 +45,7 @@ enum UsageProvider: String, CaseIterable, Identifiable {
 struct UsageWindow: Equatable {
     var utilization: Double
     var resetsAt: Date?
+    var isExhausted: Bool = false
 }
 
 struct CreditUsage: Equatable {

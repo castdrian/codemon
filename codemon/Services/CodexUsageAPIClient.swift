@@ -21,8 +21,9 @@ struct CodexUsageAPIClient {
         }
 
         let rateLimit = (json["rate_limit"] as? [String: Any]) ?? [:]
+        let limitReached = (rateLimit["limit_reached"] as? Bool == true) || (rateLimit["allowed"] as? Bool == false)
         let windows = [rateLimit["primary_window"], rateLimit["secondary_window"]]
-            .compactMap { usageWindow($0 as? [String: Any]) }
+            .compactMap { usageWindow($0 as? [String: Any], limitReached: limitReached) }
 
         let session = windows.first { $0.isSession }?.window
         let weekly = windows.first { !$0.isSession }?.window
@@ -41,11 +42,15 @@ struct CodexUsageAPIClient {
         )
     }
 
-    private func usageWindow(_ entry: [String: Any]?) -> (window: UsageWindow, isSession: Bool)? {
-        guard let entry, let usedPercent = number(entry["used_percent"]) else { return nil }
+    private func usageWindow(_ entry: [String: Any]?, limitReached: Bool) -> (window: UsageWindow, isSession: Bool)? {
+        guard let entry, let remainingPercent = number(entry["used_percent"]) else { return nil }
         let reset = number(entry["reset_at"]).map { Date(timeIntervalSince1970: $0) }
         let windowSeconds = number(entry["limit_window_seconds"]) ?? Self.sessionWindowCutoff
-        return (UsageWindow(utilization: usedPercent, resetsAt: reset), windowSeconds <= Self.sessionWindowCutoff)
+        let utilization = min(max(100 - remainingPercent, 0), 100)
+        return (
+            UsageWindow(utilization: utilization, resetsAt: reset, isExhausted: limitReached || utilization >= 100),
+            windowSeconds <= Self.sessionWindowCutoff
+        )
     }
 
     private func creditUsage(_ entry: [String: Any]?) -> CreditUsage? {

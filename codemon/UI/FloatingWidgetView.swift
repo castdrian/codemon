@@ -63,9 +63,9 @@ struct FloatingWidgetView: View {
             UsageBar(percent: value ?? 0, color: Self.usageColor(for: value ?? 0))
 
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text(Self.resetLabel(window.resetsAt, now: context.date))
+                Text(window.isExhausted ? Self.exhaustedLabel(window.resetsAt, now: context.date) : Self.resetLabel(window.resetsAt, now: context.date))
                     .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(window.isExhausted ? Color(red: 0.910, green: 0.298, blue: 0.235) : .secondary)
             }
         }
     }
@@ -116,6 +116,11 @@ struct FloatingWidgetView: View {
         formatter.minimumFractionDigits = credit.decimalPlaces
         formatter.maximumFractionDigits = credit.decimalPlaces
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
+    }
+
+    private static func exhaustedLabel(_ resetsAt: Date?, now: Date) -> String {
+        guard let resetsAt, resetsAt.timeIntervalSince(now) > 0 else { return "out of usage" }
+        return "out of usage · \(resetLabel(resetsAt, now: now))"
     }
 
     private static func resetLabel(_ resetsAt: Date?, now: Date) -> String {

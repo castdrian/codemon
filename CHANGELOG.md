@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.3]
+
+- Read the Codex weekly window as usage remaining rather than usage consumed, so an exhausted week fills the bar and turns red instead of showing an empty bar that reads as untouched. The row also spells out "out of usage" alongside the reset countdown
+
 ## [1.3.2]
 
 - Show credits for Codex again, and make an empty balance obvious: a spent balance now reads "Out of credits" on a full red bar instead of an empty one that looks like plenty left
