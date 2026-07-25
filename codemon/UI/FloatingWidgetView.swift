@@ -6,10 +6,21 @@ struct FloatingWidgetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            usageRow(title: "Session", window: providerStore.snapshot?.session)
-            usageRow(title: "Weekly", window: providerStore.snapshot?.weekly)
-            if providerStore.provider == .claude {
-                creditRow(providerStore.snapshot?.credit)
+            if let snapshot = providerStore.snapshot {
+                if let session = snapshot.session {
+                    usageRow(title: "Session", window: session)
+                }
+                if let weekly = snapshot.weekly {
+                    usageRow(title: "Weekly", window: weekly)
+                }
+                if let credit = snapshot.credit {
+                    creditRow(credit)
+                }
+            } else {
+                Text(providerStore.lastError ?? "Loading…")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(14)
@@ -38,8 +49,8 @@ struct FloatingWidgetView: View {
     }
 
     @ViewBuilder
-    private func usageRow(title: String, window: UsageWindow?) -> some View {
-        let value = window?.utilization
+    private func usageRow(title: String, window: UsageWindow) -> some View {
+        let value: Double? = window.utilization
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title)
@@ -54,7 +65,7 @@ struct FloatingWidgetView: View {
             UsageBar(percent: value ?? 0, color: Self.usageColor(for: value ?? 0))
 
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text(Self.resetLabel(window?.resetsAt, now: context.date))
+                Text(Self.resetLabel(window.resetsAt, now: context.date))
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             }
@@ -62,8 +73,8 @@ struct FloatingWidgetView: View {
     }
 
     @ViewBuilder
-    private func creditRow(_ credit: CreditUsage?) -> some View {
-        let percent = credit?.percentUsed
+    private func creditRow(_ credit: CreditUsage) -> some View {
+        let percent = credit.percentUsed
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Credits")
@@ -83,8 +94,8 @@ struct FloatingWidgetView: View {
         }
     }
 
-    private static func creditValueLabel(_ credit: CreditUsage?) -> String {
-        guard let credit else { return "—" }
+    private static func creditValueLabel(_ credit: CreditUsage) -> String {
+        if credit.isUnlimited { return "Unlimited" }
         if let remaining = credit.remaining {
             return "\(formatCurrency(remaining, credit: credit)) left"
         }

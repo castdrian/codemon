@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0]
+
+- Drop the sign-in window entirely. codemon now reads the credentials the CLIs already keep on your Mac — Claude from the `claude` CLI's Keychain entry, Codex from `~/.codex/auth.json` — and calls each provider's OAuth API directly. The first Claude read raises a macOS Keychain prompt; choose **Always Allow**. If a provider has no credentials, codemon says so and points at the CLI to run
+- Fix Codex usage never loading. The old cookie-based request was unauthorized no matter how the session was obtained, because that endpoint expects a bearer token rather than cookies
+- Show only the limits a provider actually has. Codex reports a single weekly window plus credits and no session window, so it no longer displays an empty "Session" row, and windows are now labelled from the length the API reports rather than assumed from their position
+- Keep each widget where you last dragged it. Positions were only written when a move landed after the mouse was already released, which is not what happens at the end of a drag, so the last position was usually lost
+- Show the signed-in account name and plan again, and surface the reason in the widget when usage cannot be loaded
+
 ## [1.2.5]
 
 - Bring back Sign in with Apple's Touch ID prompt. 1.2.4 turned off WebKit's extensible SSO to stop a crash, which also removed the native Apple sign-in sheet — that is why the prompt disappeared on release builds while local 1.2.3 builds still showed it

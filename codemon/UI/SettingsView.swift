@@ -54,16 +54,16 @@ private struct ProviderAccountRow: View {
     @ObservedObject var providerStore: ProviderUsageStore
 
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             Text(providerStore.provider.displayName)
             Spacer()
-            Text(statusLabel)
-                .foregroundStyle(statusColor)
-            Button(providerStore.auth.authState == .signedIn ? "Sign Out" : "Sign In…") {
-                if providerStore.auth.authState == .signedIn {
-                    providerStore.auth.signOut()
-                } else {
-                    providerStore.auth.beginSignIn()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(statusLabel)
+                    .foregroundStyle(statusColor)
+                if providerStore.auth.authState != .signedIn {
+                    Text("run `\(providerStore.provider.cliName)` in a terminal to log in")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -71,8 +71,8 @@ private struct ProviderAccountRow: View {
 
     private var statusLabel: String {
         switch providerStore.auth.authState {
-        case .signedIn: return "Signed in"
-        case .expired: return "Session expired"
+        case .signedIn: return providerStore.accountInfo?.displayName ?? "Signed in"
+        case .expired: return "Credentials expired"
         case .signedOut: return "Not signed in"
         }
     }

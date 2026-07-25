@@ -15,21 +15,19 @@
 		3385EE15AD106846C2A99F89 /* AppUpdater in Frameworks */ = {isa = PBXBuildFile; productRef = 0AA2CB5F04AC53A6CF0622A4 /* AppUpdater */; };
 		38C062F07BE834879C26CFE9 /* FloatingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE07620BDC01A75B22A627B /* FloatingWidgetView.swift */; };
 		3AB41312CC5E7358C3C2DF6E /* ProviderAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503BCDDE4682B016092720F8 /* ProviderAuthService.swift */; };
+		62BA0F97B45E6CD511CCD0F4 /* LocalCredentialsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4DE6A66464EB5A5A7CA305C /* LocalCredentialsStore.swift */; };
 		6C61036CA9A23A6F37FF42C8 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 571F10C00EE1F400B828FBDA /* AppShortcuts.swift */; };
-		887C266FA42920A2F23CEAD2 /* LoginWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2554625D5F6DCC3C2E886B /* LoginWindowController.swift */; };
 		890E310FFB7EADCD14CA56D2 /* UsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC212D4BF129AC5C8E17D6C /* UsageStore.swift */; };
 		D71A815CED30921FD25BA28F /* FloatingWidgetWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF3A7EF5FADD0B893564D3C3 /* FloatingWidgetWindow.swift */; };
 		D7FBFBDE1D266AE91132CD1F /* CodexUsageAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B42B7859787720684AE3BDF /* CodexUsageAPIClient.swift */; };
 		E0B2DA35625CFE4EB5F01732 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EFDC3149B9FC50F5A32C9BE /* AppDelegate.swift */; };
 		E1DEC2AF263D01AE2C4A6995 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF209CE7742B51105918F02 /* SettingsStore.swift */; };
-		E54D5D570ED8F31B95AAFE2D /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AD82AC8CDB1E566E23F1F7F /* KeychainStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0922F4B23F3F12C5ECC9D380 /* ClaudeUsageAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeUsageAPIClient.swift; sourceTree = "<group>"; };
 		1AC212D4BF129AC5C8E17D6C /* UsageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageStore.swift; sourceTree = "<group>"; };
 		235A49FA6210D626E7BEA49E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		2AD82AC8CDB1E566E23F1F7F /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		2CA6EA1C1BCA29CF500FB84B /* CodemonApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodemonApp.swift; sourceTree = "<group>"; };
 		2E526A0B2F682A1DF9963C2D /* codemon.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = codemon.entitlements; sourceTree = "<group>"; };
 		3FE07620BDC01A75B22A627B /* FloatingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetView.swift; sourceTree = "<group>"; };
@@ -40,9 +38,9 @@
 		732BB588C06237AC93266CEA /* UsageModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageModels.swift; sourceTree = "<group>"; };
 		95B673885DA1DBE326943344 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9B42B7859787720684AE3BDF /* CodexUsageAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageAPIClient.swift; sourceTree = "<group>"; };
+		A4DE6A66464EB5A5A7CA305C /* LocalCredentialsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCredentialsStore.swift; sourceTree = "<group>"; };
 		CDF209CE7742B51105918F02 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		EF3A7EF5FADD0B893564D3C3 /* FloatingWidgetWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetWindow.swift; sourceTree = "<group>"; };
-		FD2554625D5F6DCC3C2E886B /* LoginWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,7 +86,7 @@
 				571F10C00EE1F400B828FBDA /* AppShortcuts.swift */,
 				0922F4B23F3F12C5ECC9D380 /* ClaudeUsageAPIClient.swift */,
 				9B42B7859787720684AE3BDF /* CodexUsageAPIClient.swift */,
-				2AD82AC8CDB1E566E23F1F7F /* KeychainStore.swift */,
+				A4DE6A66464EB5A5A7CA305C /* LocalCredentialsStore.swift */,
 				503BCDDE4682B016092720F8 /* ProviderAuthService.swift */,
 				CDF209CE7742B51105918F02 /* SettingsStore.swift */,
 			);
@@ -115,7 +113,6 @@
 			children = (
 				3FE07620BDC01A75B22A627B /* FloatingWidgetView.swift */,
 				EF3A7EF5FADD0B893564D3C3 /* FloatingWidgetWindow.swift */,
-				FD2554625D5F6DCC3C2E886B /* LoginWindowController.swift */,
 				235A49FA6210D626E7BEA49E /* SettingsView.swift */,
 			);
 			path = UI;
@@ -201,8 +198,7 @@
 				D7FBFBDE1D266AE91132CD1F /* CodexUsageAPIClient.swift in Sources */,
 				38C062F07BE834879C26CFE9 /* FloatingWidgetView.swift in Sources */,
 				D71A815CED30921FD25BA28F /* FloatingWidgetWindow.swift in Sources */,
-				E54D5D570ED8F31B95AAFE2D /* KeychainStore.swift in Sources */,
-				887C266FA42920A2F23CEAD2 /* LoginWindowController.swift in Sources */,
+				62BA0F97B45E6CD511CCD0F4 /* LocalCredentialsStore.swift in Sources */,
 				3AB41312CC5E7358C3C2DF6E /* ProviderAuthService.swift in Sources */,
 				E1DEC2AF263D01AE2C4A6995 /* SettingsStore.swift in Sources */,
 				3077F517EFA0DDAB84632893 /* SettingsView.swift in Sources */,
@@ -349,7 +345,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2.5;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.adrian.codemon;
 				PRODUCT_NAME = codemon;
 				SDKROOT = macosx;
@@ -373,7 +369,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.2.5;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.adrian.codemon;
 				PRODUCT_NAME = codemon;
 				SDKROOT = macosx;

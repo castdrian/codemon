@@ -58,10 +58,10 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
     }
 
     func windowDidMove(_ notification: Notification) {
-        guard NSEvent.pressedMouseButtons == 0, !isSnapping else { return }
-        if !snapToNearestCornerIfClose() {
-            Self.saveOrigin(frame.origin, for: provider)
-        }
+        guard !isSnapping else { return }
+        Self.saveOrigin(frame.origin, for: provider)
+        guard NSEvent.pressedMouseButtons == 0 else { return }
+        snapToNearestCornerIfClose()
     }
 
     @discardableResult

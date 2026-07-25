@@ -57,12 +57,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         for providerStore in usageStore.providerStores {
+            let name = providerStore.provider.displayName
             if let snapshot = providerStore.snapshot {
-                menu.addItem(withTitle: "\(providerStore.provider.displayName) Session: \(Int((snapshot.session?.utilization ?? 0).rounded()))%", action: nil, keyEquivalent: "")
-                menu.addItem(withTitle: "\(providerStore.provider.displayName) Weekly: \(Int((snapshot.weekly?.utilization ?? 0).rounded()))%", action: nil, keyEquivalent: "")
-                if let percent = snapshot.credit?.percentUsed {
-                    menu.addItem(withTitle: "\(providerStore.provider.displayName) Credits: \(Int(percent.rounded()))%", action: nil, keyEquivalent: "")
+                if let session = snapshot.session {
+                    menu.addItem(withTitle: "\(name) Session: \(Int(session.utilization.rounded()))%", action: nil, keyEquivalent: "")
                 }
+                if let weekly = snapshot.weekly {
+                    menu.addItem(withTitle: "\(name) Weekly: \(Int(weekly.utilization.rounded()))%", action: nil, keyEquivalent: "")
+                }
+                if let percent = snapshot.credit?.percentUsed {
+                    menu.addItem(withTitle: "\(name) Credits: \(Int(percent.rounded()))%", action: nil, keyEquivalent: "")
+                }
+            } else if let error = providerStore.lastError {
+                menu.addItem(withTitle: "\(name): \(error)", action: nil, keyEquivalent: "")
             }
         }
 
@@ -77,27 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(widgetItem)
         menu.addItem(Self.item("Settings…", symbol: "gearshape", action: #selector(openSettings)))
         menu.addItem(Self.item("Check for Updates…", symbol: "arrow.down.circle", action: #selector(checkForUpdates)))
-        menu.addItem(.separator())
-
-        for providerStore in usageStore.providerStores {
-            let title: String
-            let symbol: String
-            switch providerStore.auth.authState {
-            case .signedIn:
-                title = "Sign Out of \(providerStore.provider.displayName)"
-                symbol = "person.crop.circle.badge.xmark"
-            case .expired:
-                title = "Sign In to \(providerStore.provider.displayName) Again…"
-                symbol = "person.crop.circle.badge.exclamationmark"
-            case .signedOut:
-                title = "Sign In to \(providerStore.provider.displayName)…"
-                symbol = "person.crop.circle.badge.plus"
-            }
-            let item = Self.item(title, symbol: symbol, action: #selector(toggleSignIn(_:)))
-            item.representedObject = providerStore.provider.rawValue
-            menu.addItem(item)
-        }
-
         menu.addItem(.separator())
         menu.addItem(Self.item("Support codemon on Ko-fi…", symbol: "cup.and.saucer", action: #selector(openKofi)))
         menu.addItem(.separator())
@@ -167,15 +153,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         settingsWindowController?.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    @objc private func toggleSignIn(_ sender: NSMenuItem) {
-        guard let rawValue = sender.representedObject as? String, let provider = UsageProvider(rawValue: rawValue), let providerStore = usageStore.providerStores.first(where: { $0.provider == provider }) else { return }
-        if providerStore.auth.authState == .signedIn {
-            providerStore.auth.signOut()
-        } else {
-            providerStore.auth.beginSignIn()
-        }
     }
 
     @objc private func openKofi() {

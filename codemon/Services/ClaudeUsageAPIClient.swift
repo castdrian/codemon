@@ -17,88 +17,47 @@ enum UsageAPIError: Error, LocalizedError {
 struct ClaudeUsageAPIClient {
     private let session = URLSession(configuration: .ephemeral)
 
-    func fetchBootstrap(cookieHeader: String) async throws -> (orgId: String, account: AccountInfo) {
-        var request = URLRequest(url: URL(string: "https://claude.ai/api/bootstrap")!)
-        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+    private func authorizedRequest(path: String, accessToken: String) -> URLRequest {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com\(path)")!)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+        request.setValue("claude-cli/2.1.0 (external, cli)", forHTTPHeaderField: "User-Agent")
+        return request
+    }
 
-        let (data, response) = try await session.data(for: request)
+    func fetchAccount(accessToken: String, planHint: String?) async throws -> AccountInfo {
+        let (data, response) = try await session.data(for: authorizedRequest(path: "/api/oauth/profile", accessToken: accessToken))
         try Self.validate(response)
 
-        guard
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let account = json["account"] as? [String: Any],
-            let memberships = account["memberships"] as? [[String: Any]],
-            let membership = memberships.first,
-            let organization = membership["organization"] as? [String: Any],
-            let orgId = organization["uuid"] as? String
-        else {
-            throw UsageAPIError.missingOrgId
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let account = json["account"] as? [String: Any] else {
+            throw UsageAPIError.invalidResponse
         }
 
         let displayName = (account["display_name"] as? String)
             ?? (account["full_name"] as? String)
+            ?? (account["email"] as? String)
             ?? "Claude"
-        let capabilities = organization["capabilities"] as? [String] ?? []
-        let planLabel = Self.planLabel(capabilities: capabilities)
-
-        return (orgId, AccountInfo(displayName: displayName, planLabel: planLabel))
+        return AccountInfo(displayName: displayName, planLabel: Self.planLabel(account: account, planHint: planHint))
     }
 
-    private static func planLabel(capabilities: [String]) -> String {
-        let ranked: [(String, String)] = [
-            ("claude_enterprise", "Claude Enterprise"),
-            ("claude_team", "Claude Team"),
-            ("claude_max", "Claude Max"),
-            ("claude_pro", "Claude Pro")
-        ]
-        for (capability, label) in ranked where capabilities.contains(capability) {
-            return label
-        }
-        return "Claude Free"
+    private static func planLabel(account: [String: Any], planHint: String?) -> String {
+        if account["has_claude_max"] as? Bool == true { return "Claude Max" }
+        if account["has_claude_pro"] as? Bool == true { return "Claude Pro" }
+        guard let planHint, !planHint.isEmpty else { return "Claude" }
+        return "Claude \(planHint.capitalized)"
     }
 
-    func fetchUsage(cookieHeader: String, orgId: String) async throws -> UsageSnapshot {
-        var request = URLRequest(url: URL(string: "https://claude.ai/api/organizations/\(orgId)/usage")!)
-        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("https://claude.ai", forHTTPHeaderField: "Origin")
-        request.setValue("https://claude.ai/settings/usage", forHTTPHeaderField: "Referer")
-
-        let (data, response) = try await session.data(for: request)
+    func fetchUsage(accessToken: String) async throws -> UsageSnapshot {
+        let (data, response) = try await session.data(for: authorizedRequest(path: "/api/oauth/usage", accessToken: accessToken))
         try Self.validate(response)
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw UsageAPIError.invalidResponse
         }
-
-        var snapshot = Self.parse(json)
-
-        if let credit = snapshot.credit, credit.limit == nil,
-           let balance = try? await fetchPrepaidBalance(cookieHeader: cookieHeader, orgId: orgId) {
-            let used = credit.used ?? 0
-            let total = used + balance
-            snapshot.credit?.remaining = balance
-            snapshot.credit?.percentUsed = total > 0 ? (used / total) * 100 : 0
-        }
-
-        return snapshot
-    }
-
-    private func fetchPrepaidBalance(cookieHeader: String, orgId: String) async throws -> Double? {
-        var request = URLRequest(url: URL(string: "https://claude.ai/api/organizations/\(orgId)/prepaid/credits")!)
-        request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        let (data, response) = try await session.data(for: request)
-        try Self.validate(response)
-
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return nil
-        }
-        if let amount = json["amount"] as? Double { return amount }
-        if let amount = json["amount"] as? Int { return Double(amount) }
-        return nil
+        return Self.parse(json)
     }
 
     private static func validate(_ response: URLResponse) throws {

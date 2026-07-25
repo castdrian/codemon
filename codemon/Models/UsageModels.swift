@@ -13,17 +13,24 @@ enum UsageProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    var loginURL: URL {
+    var credentialsHint: String {
         switch self {
-        case .claude: return URL(string: "https://claude.ai/login")!
-        case .codex: return URL(string: "https://chatgpt.com/auth/login?next=/codex/settings/usage")!
+        case .claude: return "Not signed in — run `claude` to log in"
+        case .codex: return "Not signed in — run `codex` to log in"
         }
     }
 
-    var cookieDomains: [String] {
+    var expiredHint: String {
         switch self {
-        case .claude: return ["claude.ai"]
-        case .codex: return ["chatgpt.com"]
+        case .claude: return "Credentials expired — run `claude` to log in again"
+        case .codex: return "Credentials expired — run `codex` to log in again"
+        }
+    }
+
+    var cliName: String {
+        switch self {
+        case .claude: return "claude"
+        case .codex: return "codex"
         }
     }
 
@@ -47,6 +54,7 @@ struct CreditUsage: Equatable {
     var percentUsed: Double?
     var currency: String?
     var decimalPlaces: Int
+    var isUnlimited: Bool = false
 }
 
 struct UsageSnapshot: Equatable {

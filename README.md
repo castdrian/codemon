@@ -1,6 +1,6 @@
 # codemon
 
-Menu bar app that tracks your Claude and Codex usage — session, weekly, and Claude extra credits — with a small floating widget. No DevTools, no manual cookie pasting.
+Menu bar app that tracks your Claude and Codex usage — session, weekly, and credits — with a small floating widget. No sign-in: it reads the credentials the `claude` and `codex` CLIs already store on your Mac.
 
 <p align="center">
   <img src="https://adriancastro.dev/rel05geam3lp.png" alt="codemon screenshot 1" width="260" />
@@ -10,8 +10,8 @@ Menu bar app that tracks your Claude and Codex usage — session, weekly, and Cl
 
 ## Features
 
-- Floating widget with live Claude and Codex session/weekly usage, Claude credit usage, and reset countdowns
-- Separate embedded sign-in flows for Claude and Codex; sessions are stored in the Keychain
+- One floating widget per provider, each with its own draggable position, showing only the limits that provider actually has
+- No sign-in flow: Claude usage comes from the `claude` CLI's Keychain credentials, Codex from `~/.codex/auth.json`
 - Menu bar dropdown with per-provider usage percentages
 - Customizable global shortcut to toggle the widget
 - Auto-updates via GitHub releases
@@ -19,6 +19,8 @@ Menu bar app that tracks your Claude and Codex usage — session, weekly, and Cl
 ## Requirements
 
 macOS 13 Ventura or later.
+
+Sign in with the CLIs you want tracked — run `claude` for Claude and `codex` for Codex. codemon reads those existing credentials and never asks for them itself. The first Claude read triggers a macOS Keychain prompt; choose **Always Allow** so it does not ask again.
 
 ## Installation
 

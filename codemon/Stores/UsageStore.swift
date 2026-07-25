@@ -17,28 +17,13 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
     private let codexClient = CodexUsageAPIClient()
     private var timer: Timer?
     private var refreshInterval: TimeInterval
-    private var orgId: String?
     private var cancellables = Set<AnyCancellable>()
 
     init(provider: UsageProvider, refreshInterval: TimeInterval) {
         self.provider = provider
         self.auth = ProviderAuthService(provider: provider)
         self.refreshInterval = refreshInterval
-        self.orgId = KeychainStore.load(account: "\(provider.rawValue).orgId")
         self.accountInfo = Self.loadCachedAccountInfo(for: provider)
-
-        auth.$authState
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in
-                guard let self else { return }
-                if state == .signedOut {
-                    self.reset()
-                } else if state == .signedIn {
-                    Task { await self.refresh() }
-                }
-            }
-            .store(in: &cancellables)
 
         startTimer()
         Task { await refresh() }
@@ -54,8 +39,9 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
     }
 
     func refresh() async {
-        guard let cookieHeader = auth.cookieHeader else {
-            lastError = "Not signed in"
+        guard let credentials = await auth.reload() else {
+            reset()
+            lastError = provider.credentialsHint
             return
         }
 
@@ -65,17 +51,20 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
         do {
             switch provider {
             case .claude:
-                if orgId == nil || accountInfo == nil {
-                    let bootstrap = try await claudeClient.fetchBootstrap(cookieHeader: cookieHeader)
-                    orgId = bootstrap.orgId
-                    KeychainStore.save(bootstrap.orgId, account: "\(provider.rawValue).orgId")
-                    accountInfo = bootstrap.account
-                    Self.cacheAccountInfo(bootstrap.account, for: provider)
+                if accountInfo == nil {
+                    let account = try await claudeClient.fetchAccount(
+                        accessToken: credentials.accessToken,
+                        planHint: credentials.planHint
+                    )
+                    accountInfo = account
+                    Self.cacheAccountInfo(account, for: provider)
                 }
-                guard let orgId else { return }
-                snapshot = try await claudeClient.fetchUsage(cookieHeader: cookieHeader, orgId: orgId)
+                snapshot = try await claudeClient.fetchUsage(accessToken: credentials.accessToken)
             case .codex:
-                let result = try await codexClient.fetchUsage(cookieHeader: cookieHeader)
+                let result = try await codexClient.fetchUsage(
+                    accessToken: credentials.accessToken,
+                    accountId: credentials.accountId
+                )
                 snapshot = result.snapshot
                 accountInfo = result.account
                 Self.cacheAccountInfo(result.account, for: provider)
@@ -83,7 +72,7 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
             lastError = nil
         } catch UsageAPIError.unauthorized {
             auth.markExpired()
-            lastError = "Session expired — please sign in again"
+            lastError = provider.expiredHint
         } catch {
             lastError = error.localizedDescription
         }
@@ -101,9 +90,6 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
     private func reset() {
         snapshot = nil
         accountInfo = nil
-        orgId = nil
-        lastError = nil
-        KeychainStore.delete(account: "\(provider.rawValue).orgId")
         UserDefaults.standard.removeObject(forKey: Self.accountInfoDefaultsKey(for: provider))
     }
 
