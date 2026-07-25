@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "bolt.circle", accessibilityDescription: "codemon")
+        statusItem.button?.image = NSImage(systemSymbolName: "speedometer", accessibilityDescription: "codemon")
         buildMenu()
 
         usageStore.objectWillChange
