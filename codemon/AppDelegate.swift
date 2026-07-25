@@ -8,7 +8,7 @@ import KeyboardShortcuts
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private lazy var usageStore = UsageStore()
-    private var floatingWindow: FloatingWidgetWindow?
+    private var floatingWindows: [UsageProvider: FloatingWidgetWindow] = [:]
     private var settingsWindowController: NSWindowController?
     private var cancellables = Set<AnyCancellable>()
     private let appUpdater = AppUpdater(owner: "castdrian", repo: "codemon")
@@ -125,31 +125,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updateFloatingWidgetVisibility() {
         guard SettingsStore.shared.showFloatingWidget else {
-            floatingWindow?.orderOut(nil)
+            floatingWindows.values.forEach { $0.orderOut(nil) }
             return
         }
 
-        if SettingsStore.shared.showWidgetOnlyWhenProviderFocused {
-            let activeBundleIdentifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-            let isProviderFocused = UsageProvider.allCases.contains { provider in
-                guard let activeBundleIdentifier else { return false }
-                return provider.desktopBundleIdentifiers.contains(activeBundleIdentifier)
+        let activeBundleIdentifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        for (index, providerStore) in usageStore.providerStores.enumerated() {
+            let isVisible: Bool
+            if SettingsStore.shared.showWidgetOnlyWhenProviderFocused {
+                isVisible = activeBundleIdentifier.map { providerStore.provider.desktopBundleIdentifiers.contains($0) } ?? false
+            } else {
+                isVisible = true
             }
-            setWidgetWindowVisible(isProviderFocused)
-        } else {
-            setWidgetWindowVisible(true)
+            setWidgetWindowVisible(isVisible, for: providerStore, stackIndex: index)
         }
     }
 
-    private func setWidgetWindowVisible(_ visible: Bool) {
+    private func setWidgetWindowVisible(_ visible: Bool, for providerStore: ProviderUsageStore, stackIndex: Int) {
         guard visible else {
-            floatingWindow?.orderOut(nil)
+            floatingWindows[providerStore.provider]?.orderOut(nil)
             return
         }
-        if floatingWindow == nil {
-            floatingWindow = FloatingWidgetWindow(usageStore: usageStore)
+        let window: FloatingWidgetWindow
+        if let existing = floatingWindows[providerStore.provider] {
+            window = existing
+        } else {
+            window = FloatingWidgetWindow(providerStore: providerStore, stackIndex: stackIndex)
+            floatingWindows[providerStore.provider] = window
         }
-        floatingWindow?.orderFrontRegardless()
+        window.orderFrontRegardless()
     }
 
     @objc private func openSettings() {

@@ -3,11 +3,13 @@ import SwiftUI
 
 final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
     private static let cornerSnapThreshold: CGFloat = 40
-    private static let originDefaultsKey = "floatingWidgetOrigin"
 
+    private let provider: UsageProvider
     private var isSnapping = false
 
-    init(usageStore: UsageStore) {
+    init(providerStore: ProviderUsageStore, stackIndex: Int) {
+        provider = providerStore.provider
+
         super.init(
             contentRect: .zero,
             styleMask: [.nonactivatingPanel, .borderless],
@@ -25,23 +27,23 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         hidesOnDeactivate = false
         delegate = self
 
-        let hostingView = NSHostingView(rootView: FloatingWidgetView(usageStore: usageStore))
+        let hostingView = NSHostingView(rootView: FloatingWidgetView(providerStore: providerStore))
         contentView = hostingView
         setContentSize(hostingView.fittingSize)
 
-        if let savedOrigin = Self.loadSavedOrigin() {
+        if let savedOrigin = Self.loadSavedOrigin(for: provider) {
             setFrame(constrainFrameRect(NSRect(origin: savedOrigin, size: frame.size), to: screen ?? NSScreen.main), display: false)
         } else {
-            positionTopLeft()
+            positionTopLeft(stackIndex: stackIndex)
         }
     }
 
-    func positionTopLeft(margin: CGFloat = 12) {
+    func positionTopLeft(stackIndex: Int, margin: CGFloat = 12, spacing: CGFloat = 10) {
         guard let screen = NSScreen.main else { return }
         let visible = screen.visibleFrame
         let origin = NSPoint(
             x: visible.minX + margin,
-            y: visible.maxY - frame.height - margin
+            y: visible.maxY - frame.height - margin - CGFloat(stackIndex) * (frame.height + spacing)
         )
         setFrameOrigin(origin)
     }
@@ -58,7 +60,7 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {
         guard NSEvent.pressedMouseButtons == 0, !isSnapping else { return }
         if !snapToNearestCornerIfClose() {
-            Self.saveOrigin(frame.origin)
+            Self.saveOrigin(frame.origin, for: provider)
         }
     }
 
@@ -86,7 +88,7 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         } completionHandler: { [weak self] in
             guard let self else { return }
             isSnapping = false
-            Self.saveOrigin(frame.origin)
+            Self.saveOrigin(frame.origin, for: provider)
         }
         return true
     }
@@ -95,12 +97,16 @@ final class FloatingWidgetWindow: NSPanel, NSWindowDelegate {
         hypot(a.x - b.x, a.y - b.y)
     }
 
-    private static func saveOrigin(_ origin: NSPoint) {
-        UserDefaults.standard.set([origin.x, origin.y], forKey: originDefaultsKey)
+    private static func originDefaultsKey(for provider: UsageProvider) -> String {
+        "floatingWidgetOrigin.\(provider.rawValue)"
     }
 
-    private static func loadSavedOrigin() -> NSPoint? {
-        guard let coordinates = UserDefaults.standard.array(forKey: originDefaultsKey) as? [Double],
+    private static func saveOrigin(_ origin: NSPoint, for provider: UsageProvider) {
+        UserDefaults.standard.set([origin.x, origin.y], forKey: originDefaultsKey(for: provider))
+    }
+
+    private static func loadSavedOrigin(for provider: UsageProvider) -> NSPoint? {
+        guard let coordinates = UserDefaults.standard.array(forKey: originDefaultsKey(for: provider)) as? [Double],
               coordinates.count == 2 else { return nil }
         return NSPoint(x: coordinates[0], y: coordinates[1])
     }

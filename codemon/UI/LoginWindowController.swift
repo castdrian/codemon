@@ -9,6 +9,9 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     private let onCaptured: (String) -> Void
     private var pollTimer: Timer?
     private var lastHandledClipboard: String?
+    private var instructions: NSTextField!
+
+    private static let appleAuthHosts: Set<String> = ["appleid.apple.com", "idmsa.apple.com", "signin.apple.com"]
 
     init(provider: UsageProvider, dataStore: WKWebsiteDataStore, onCaptured: @escaping (String) -> Void) {
         self.provider = provider
@@ -26,7 +29,7 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
         webView.uiDelegate = self
         webView.translatesAutoresizingMaskIntoConstraints = false
 
-        let instructions = NSTextField(wrappingLabelWithString: "Sign in to \(provider.displayName). codemon securely stores this provider session in your Keychain so it can refresh your usage.")
+        instructions = NSTextField(wrappingLabelWithString: "Sign in to \(provider.displayName). codemon securely stores this provider session in your Keychain so it can refresh your usage.")
         instructions.font = .systemFont(ofSize: 11)
         instructions.textColor = .secondaryLabelColor
         instructions.translatesAutoresizingMaskIntoConstraints = false
@@ -151,6 +154,20 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         checkCookies()
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url, let host = url.host, Self.isAppleAuthHost(host) else {
+            decisionHandler(.allow)
+            return
+        }
+        decisionHandler(.cancel)
+        NSWorkspace.shared.open(url)
+        instructions.stringValue = "Sign in with Apple ID needs to finish in your default browser (Touch ID/passkeys don't work inside this window). Once you're signed in, copy the resulting \(provider.displayName) link and paste it below."
+    }
+
+    private static func isAppleAuthHost(_ host: String) -> Bool {
+        appleAuthHosts.contains { host == $0 || host.hasSuffix(".\($0)") }
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
