@@ -11,7 +11,18 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     private var lastHandledClipboard: String?
     private var instructions: NSTextField!
 
-    private static let appleAuthHosts: Set<String> = ["appleid.apple.com", "idmsa.apple.com", "signin.apple.com"]
+    private static let disableWebAuthnScriptSource = """
+    (function () {
+        if (window.PublicKeyCredential) {
+            Object.defineProperty(window, 'PublicKeyCredential', { value: undefined, configurable: true });
+        }
+        if (window.navigator && window.navigator.credentials) {
+            var reject = function () { return Promise.reject(new DOMException('WebAuthn is not available', 'NotSupportedError')); };
+            window.navigator.credentials.get = reject;
+            window.navigator.credentials.create = reject;
+        }
+    })();
+    """
 
     init(provider: UsageProvider, dataStore: WKWebsiteDataStore, onCaptured: @escaping (String) -> Void) {
         self.provider = provider
@@ -23,6 +34,9 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
     private func setUp(dataStore: WKWebsiteDataStore) {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = dataStore
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: Self.disableWebAuthnScriptSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        )
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
@@ -154,20 +168,6 @@ final class LoginWindowController: NSObject, NSWindowDelegate, WKNavigationDeleg
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         checkCookies()
-    }
-
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        guard let url = navigationAction.request.url, let host = url.host, Self.isAppleAuthHost(host) else {
-            decisionHandler(.allow)
-            return
-        }
-        decisionHandler(.cancel)
-        NSWorkspace.shared.open(url)
-        instructions.stringValue = "Sign in with Apple ID needs to finish in your default browser (Touch ID/passkeys don't work inside this window). Once you're signed in, copy the resulting \(provider.displayName) link and paste it below."
-    }
-
-    private static func isAppleAuthHost(_ host: String) -> Bool {
-        appleAuthHosts.contains { host == $0 || host.hasSuffix(".\($0)") }
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {

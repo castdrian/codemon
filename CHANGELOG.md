@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.2]
+
+- Fix Codex sign-in failing with "Authentication Error — client_id_not_found_in_session" — 1.2.1's fix for the Apple ID Touch ID hang opened Apple's auth pages in the system browser, but the OAuth session state (`client_id`, PKCE verifier, etc.) lives in the embedded sign-in window's own isolated cookie store, so the callback landed in a browser with no matching session and failed for every sign-in, not just Apple ID. Reverted that handoff. Touch ID/passkey prompts are now prevented at the source instead: the sign-in window disables `navigator.credentials`/`PublicKeyCredential` via an injected script, so Apple's page falls back to password entry within the same window and session
+
 ## [1.2.1]
 
 - Fix the Codex sign-in window closing immediately after it opens — `chatgpt.com` sets CSRF/PKCE cookies (e.g. `authjs.csrf-token`) as soon as the login page loads, and the old check treated any cookie with "auth" or "session" in its name as a signed-in session, capturing and closing the window before the user could sign in. Now only the actual `*session-token` cookie counts
