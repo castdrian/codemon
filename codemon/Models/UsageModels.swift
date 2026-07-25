@@ -27,13 +27,6 @@ enum UsageProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    var hasCredits: Bool {
-        switch self {
-        case .claude: return true
-        case .codex: return false
-        }
-    }
-
     var cliName: String {
         switch self {
         case .claude: return "claude"
@@ -62,6 +55,11 @@ struct CreditUsage: Equatable {
     var currency: String?
     var decimalPlaces: Int
     var isUnlimited: Bool = false
+
+    var isExhausted: Bool {
+        guard !isUnlimited, let remaining else { return false }
+        return remaining <= 0
+    }
 }
 
 struct UsageSnapshot: Equatable {

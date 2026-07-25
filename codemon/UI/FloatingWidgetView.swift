@@ -13,9 +13,7 @@ struct FloatingWidgetView: View {
                 if let weekly = snapshot.weekly {
                     usageRow(title: "Weekly", window: weekly)
                 }
-                if providerStore.provider.hasCredits {
-                    creditRow(snapshot.credit)
-                }
+                creditRow(snapshot.credit)
             } else {
                 Text(providerStore.lastError ?? "Loading…")
                     .font(.system(size: 10))
@@ -74,7 +72,8 @@ struct FloatingWidgetView: View {
 
     @ViewBuilder
     private func creditRow(_ credit: CreditUsage?) -> some View {
-        let percent = credit?.percentUsed
+        let exhausted = credit?.isExhausted ?? false
+        let percent = exhausted ? 100 : (credit?.percentUsed ?? 0)
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Credits")
@@ -86,7 +85,7 @@ struct FloatingWidgetView: View {
             }
             .foregroundStyle(.primary)
 
-            UsageBar(percent: percent ?? 0, color: Self.usageColor(for: percent ?? 0))
+            UsageBar(percent: percent, color: Self.usageColor(for: percent))
 
             Text(" ")
                 .font(.system(size: 9))
@@ -97,6 +96,7 @@ struct FloatingWidgetView: View {
     private static func creditValueLabel(_ credit: CreditUsage?) -> String {
         guard let credit else { return "—" }
         if credit.isUnlimited { return "Unlimited" }
+        if credit.isExhausted { return "Out of credits" }
         if let remaining = credit.remaining {
             return "\(formatCurrency(remaining, credit: credit)) left"
         }

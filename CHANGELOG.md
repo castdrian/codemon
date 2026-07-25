@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.2]
+
+- Show credits for Codex again, and make an empty balance obvious: a spent balance now reads "Out of credits" on a full red bar instead of an empty one that looks like plenty left
+
 ## [1.3.1]
 
 - Bring back the Claude credits row. Claude reports extra usage as disabled when the balance is spent, which 1.3.0 read as "no credits section at all" and hid the row entirely; it is shown again whenever the provider has credits, falling back to a dash. Codex, which has no credits worth showing, no longer renders one
