@@ -63,7 +63,8 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
             case .codex:
                 let result = try await codexClient.fetchUsage(
                     accessToken: credentials.accessToken,
-                    accountId: credentials.accountId
+                    accountId: credentials.accountId,
+                    accountName: credentials.accountName
                 )
                 snapshot = result.snapshot
                 accountInfo = result.account

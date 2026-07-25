@@ -27,6 +27,13 @@ enum UsageProvider: String, CaseIterable, Identifiable {
         }
     }
 
+    var hasCredits: Bool {
+        switch self {
+        case .claude: return true
+        case .codex: return false
+        }
+    }
+
     var cliName: String {
         switch self {
         case .claude: return "claude"

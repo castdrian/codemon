@@ -4,7 +4,7 @@ struct CodexUsageAPIClient {
     private let session = URLSession(configuration: .ephemeral)
     private static let sessionWindowCutoff: Double = 6 * 60 * 60
 
-    func fetchUsage(accessToken: String, accountId: String?) async throws -> (snapshot: UsageSnapshot, account: AccountInfo) {
+    func fetchUsage(accessToken: String, accountId: String?, accountName: String?) async throws -> (snapshot: UsageSnapshot, account: AccountInfo) {
         var request = URLRequest(url: URL(string: "https://chatgpt.com/backend-api/wham/usage")!)
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -31,7 +31,10 @@ struct CodexUsageAPIClient {
 
         let planType = (json["plan_type"] as? String) ?? (rateLimit["plan_type"] as? String)
         let planLabel = planType.map(Self.planLabel) ?? "Codex"
-        let displayName = (json["email"] as? String) ?? (json["account_name"] as? String) ?? "Codex"
+        let displayName = accountName
+            ?? (json["account_name"] as? String)
+            ?? (json["email"] as? String)
+            ?? "Codex"
         return (
             UsageSnapshot(session: session, weekly: weekly, credit: credit, fetchedAt: Date()),
             AccountInfo(displayName: displayName, planLabel: planLabel)

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.1]
+
+- Bring back the Claude credits row. Claude reports extra usage as disabled when the balance is spent, which 1.3.0 read as "no credits section at all" and hid the row entirely; it is shown again whenever the provider has credits, falling back to a dash. Codex, which has no credits worth showing, no longer renders one
+- Show the Codex account name rather than the email address, read from the `name` claim in the id_token that `~/.codex/auth.json` already stores
+
 ## [1.3.0]
 
 - Drop the sign-in window entirely. codemon now reads the credentials the CLIs already keep on your Mac — Claude from the `claude` CLI's Keychain entry, Codex from `~/.codex/auth.json` — and calls each provider's OAuth API directly. The first Claude read raises a macOS Keychain prompt; choose **Always Allow**. If a provider has no credentials, codemon says so and points at the CLI to run

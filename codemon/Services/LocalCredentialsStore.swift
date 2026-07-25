@@ -5,6 +5,7 @@ struct ProviderCredentials: Sendable {
     var accessToken: String
     var accountId: String?
     var planHint: String?
+    var accountName: String?
     var expiresAt: Date?
 
     var isExpired: Bool {
@@ -79,14 +80,31 @@ enum LocalCredentialsStore {
                 accessToken: accessToken,
                 accountId: tokens["account_id"] as? String,
                 planHint: nil,
+                accountName: (tokens["id_token"] as? String).flatMap(Self.name(fromIDToken:)),
                 expiresAt: nil
             )
         }
 
         if let apiKey = json["OPENAI_API_KEY"] as? String, !apiKey.isEmpty {
-            return ProviderCredentials(accessToken: apiKey, accountId: nil, planHint: nil, expiresAt: nil)
+            return ProviderCredentials(accessToken: apiKey, accountId: nil, planHint: nil, accountName: nil, expiresAt: nil)
         }
 
         throw CredentialsError.unreadable(.codex)
+    }
+
+    private static func name(fromIDToken token: String) -> String? {
+        let segments = token.split(separator: ".")
+        guard segments.count > 1 else { return nil }
+
+        var encoded = String(segments[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        encoded += String(repeating: "=", count: (4 - encoded.count % 4) % 4)
+
+        guard let data = Data(base64Encoded: encoded),
+              let claims = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let name = claims["name"] as? String,
+              !name.isEmpty else { return nil }
+        return name
     }
 }
