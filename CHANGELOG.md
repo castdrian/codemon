@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0]
+
+- Make the Codex credit bar actually move as credits deplete. Codex only reports a remaining balance with no total, so there was nothing to draw a bar from and it sat empty while the balance counted down — reading as "nothing used" at exactly the moment you were spending. codemon now remembers the largest balance it has seen and fills the bar as the balance falls below it. A top-up above that mark becomes the new full, and running dry clears it so the next top-up starts from a fresh baseline. If codemon first sees the balance mid-spend it treats that as full, so the bar is only accurate from the next top-up onwards
+
 ## [1.3.5]
 
 - Treat "no credits in use" the same way for both providers: a dash and an empty bar. Codex previously turned that state into a red "Out of credits" bar while Claude showed a dash for the very same situation, which read as two different problems rather than one shared idle state

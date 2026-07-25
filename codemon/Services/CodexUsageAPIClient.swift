@@ -60,12 +60,20 @@ struct CodexUsageAPIClient {
             return CreditUsage(remaining: nil, limit: nil, used: nil, percentUsed: nil, currency: "USD", decimalPlaces: 2, isUnlimited: true)
         }
 
-        guard entry["has_credits"] as? Bool == true, let balance = number(entry["balance"]), balance > 0 else { return nil }
+        guard entry["has_credits"] as? Bool == true,
+              let balance = number(entry["balance"]),
+              balance > 0,
+              let baseline = CreditBaselineStore.reconcile(balance: balance, for: .codex) else {
+            _ = CreditBaselineStore.reconcile(balance: 0, for: .codex)
+            return nil
+        }
+
+        let spent = max(baseline - balance, 0)
         return CreditUsage(
             remaining: balance * 100,
-            limit: nil,
-            used: nil,
-            percentUsed: nil,
+            limit: baseline * 100,
+            used: spent * 100,
+            percentUsed: min(max(spent / baseline * 100, 0), 100),
             currency: "USD",
             decimalPlaces: 2,
             isUnlimited: false
