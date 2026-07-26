@@ -90,6 +90,7 @@ struct CodexUsageAPIClient {
     private func validate(_ response: URLResponse) throws {
         guard let response = response as? HTTPURLResponse else { throw UsageAPIError.invalidResponse }
         if response.statusCode == 401 || response.statusCode == 403 { throw UsageAPIError.unauthorized }
+        if response.statusCode == 429 { throw UsageAPIError.rateLimited }
         guard (200..<300).contains(response.statusCode) else { throw UsageAPIError.invalidResponse }
     }
 

@@ -7,10 +7,15 @@ struct ProviderCredentials: Sendable {
     var planHint: String?
     var accountName: String?
     var expiresAt: Date?
+    var refreshToken: String?
 
     var isExpired: Bool {
+        expires(within: 0)
+    }
+
+    func expires(within leeway: TimeInterval) -> Bool {
         guard let expiresAt else { return false }
-        return expiresAt <= Date()
+        return expiresAt <= Date().addingTimeInterval(leeway)
     }
 }
 
@@ -27,6 +32,8 @@ enum CredentialsError: LocalizedError {
 }
 
 enum LocalCredentialsStore {
+    private static let claudeKeychainService = "Claude Code-credentials"
+
     static func load(for provider: UsageProvider) throws -> ProviderCredentials {
         switch provider {
         case .claude: return try loadClaude()
@@ -34,10 +41,16 @@ enum LocalCredentialsStore {
         }
     }
 
-    private static func loadClaude() throws -> ProviderCredentials {
+    static func refreshClaude(using refreshToken: String) async throws -> ProviderCredentials {
+        let tokens = try await ClaudeTokenRefresher.exchange(refreshToken: refreshToken)
+        try persistClaude(tokens)
+        return try loadClaude()
+    }
+
+    private static func claudeKeychainJSON() throws -> [String: Any] {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "Claude Code-credentials",
+            kSecAttrService as String: claudeKeychainService,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -47,8 +60,41 @@ enum LocalCredentialsStore {
             throw CredentialsError.missing(.claude)
         }
 
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw CredentialsError.unreadable(.claude)
+        }
+        return json
+    }
+
+    private static func persistClaude(_ tokens: RefreshedTokens) throws {
+        var json = try claudeKeychainJSON()
+        var oauth = json["claudeAiOauth"] as? [String: Any] ?? [:]
+
+        oauth["accessToken"] = tokens.accessToken
+        if let rotated = tokens.refreshToken {
+            oauth["refreshToken"] = rotated
+        }
+        if let expiresAt = tokens.expiresAt {
+            oauth["expiresAt"] = (expiresAt.timeIntervalSince1970 * 1000).rounded()
+        }
+        json["claudeAiOauth"] = oauth
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: claudeKeychainService
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: try JSONSerialization.data(withJSONObject: json)
+        ]
+        guard SecItemUpdate(query as CFDictionary, attributes as CFDictionary) == errSecSuccess else {
+            throw CredentialsError.unreadable(.claude)
+        }
+    }
+
+    private static func loadClaude() throws -> ProviderCredentials {
+        let json = try claudeKeychainJSON()
+
+        guard let oauth = json["claudeAiOauth"] as? [String: Any],
               let accessToken = oauth["accessToken"] as? String,
               !accessToken.isEmpty else {
             throw CredentialsError.unreadable(.claude)
@@ -59,7 +105,8 @@ enum LocalCredentialsStore {
             accessToken: accessToken,
             accountId: json["organizationUuid"] as? String,
             planHint: oauth["subscriptionType"] as? String,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            refreshToken: oauth["refreshToken"] as? String
         )
     }
 

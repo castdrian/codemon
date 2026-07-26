@@ -2,12 +2,14 @@ import Foundation
 
 enum UsageAPIError: Error, LocalizedError {
     case unauthorized
+    case rateLimited
     case invalidResponse
     case missingOrgId
 
     var errorDescription: String? {
         switch self {
         case .unauthorized: return "Session expired"
+        case .rateLimited: return "Rate limited — retrying shortly"
         case .invalidResponse: return "Unexpected response from claude.ai"
         case .missingOrgId: return "Could not determine organization ID"
         }
@@ -66,6 +68,9 @@ struct ClaudeUsageAPIClient {
         }
         if http.statusCode == 401 || http.statusCode == 403 {
             throw UsageAPIError.unauthorized
+        }
+        if http.statusCode == 429 {
+            throw UsageAPIError.rateLimited
         }
         guard (200..<300).contains(http.statusCode) else {
             throw UsageAPIError.invalidResponse

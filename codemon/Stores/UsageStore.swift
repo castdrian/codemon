@@ -45,6 +45,11 @@ final class ProviderUsageStore: ObservableObject, Identifiable {
             return
         }
 
+        guard !credentials.isExpired else {
+            lastError = provider.expiredHint
+            return
+        }
+
         isRefreshing = true
         defer { isRefreshing = false }
 

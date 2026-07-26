@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.6.0]
+
+- Keep the Claude widget running when the CLI's token lapses. codemon read the access token the `claude` CLI keeps in the Keychain but never the refresh token stored beside it, so once that token expired the widget went dark until you happened to run `claude` again. It now renews the token itself, five minutes ahead of expiry, and writes the new pair back to the same Keychain entry with every other field the CLI stores there left intact
+- Stop blaming claude.ai for an expired session. Claude's usage endpoint weighs rate limits before credentials, so an expired token came back as a rate limit rather than a rejection, and the widget reported "Unexpected response from claude.ai" for what was only a stale login. Expired credentials are now caught before the request is sent, and a real rate limit says so plainly
+
 ## [1.5.0]
 
 - Let the menu bar icon report the state it is monitoring: the gauge needle now tracks the highest usage across every provider and window, sweeping up as you approach a limit — level at under 70%, raised past 70%, and pinned near the top past 90%

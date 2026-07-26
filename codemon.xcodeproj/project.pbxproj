@@ -15,6 +15,7 @@
 		3385EE15AD106846C2A99F89 /* AppUpdater in Frameworks */ = {isa = PBXBuildFile; productRef = 0AA2CB5F04AC53A6CF0622A4 /* AppUpdater */; };
 		38C062F07BE834879C26CFE9 /* FloatingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE07620BDC01A75B22A627B /* FloatingWidgetView.swift */; };
 		3AB41312CC5E7358C3C2DF6E /* ProviderAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503BCDDE4682B016092720F8 /* ProviderAuthService.swift */; };
+		46306090A64FD82AD6C2A522 /* ClaudeTokenRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C90CBADDBC57C49922D1B0 /* ClaudeTokenRefresher.swift */; };
 		62BA0F97B45E6CD511CCD0F4 /* LocalCredentialsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4DE6A66464EB5A5A7CA305C /* LocalCredentialsStore.swift */; };
 		6C61036CA9A23A6F37FF42C8 /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 571F10C00EE1F400B828FBDA /* AppShortcuts.swift */; };
 		8737DD18530150064FC6C89B /* CreditBaselineStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44351C9FBC3A714EF972698 /* CreditBaselineStore.swift */; };
@@ -40,6 +41,7 @@
 		95B673885DA1DBE326943344 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9B42B7859787720684AE3BDF /* CodexUsageAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexUsageAPIClient.swift; sourceTree = "<group>"; };
 		A4DE6A66464EB5A5A7CA305C /* LocalCredentialsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCredentialsStore.swift; sourceTree = "<group>"; };
+		B0C90CBADDBC57C49922D1B0 /* ClaudeTokenRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeTokenRefresher.swift; sourceTree = "<group>"; };
 		CDF209CE7742B51105918F02 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		E44351C9FBC3A714EF972698 /* CreditBaselineStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditBaselineStore.swift; sourceTree = "<group>"; };
 		EF3A7EF5FADD0B893564D3C3 /* FloatingWidgetWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingWidgetWindow.swift; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 			isa = PBXGroup;
 			children = (
 				571F10C00EE1F400B828FBDA /* AppShortcuts.swift */,
+				B0C90CBADDBC57C49922D1B0 /* ClaudeTokenRefresher.swift */,
 				0922F4B23F3F12C5ECC9D380 /* ClaudeUsageAPIClient.swift */,
 				9B42B7859787720684AE3BDF /* CodexUsageAPIClient.swift */,
 				E44351C9FBC3A714EF972698 /* CreditBaselineStore.swift */,
@@ -196,6 +199,7 @@
 			files = (
 				E0B2DA35625CFE4EB5F01732 /* AppDelegate.swift in Sources */,
 				6C61036CA9A23A6F37FF42C8 /* AppShortcuts.swift in Sources */,
+				46306090A64FD82AD6C2A522 /* ClaudeTokenRefresher.swift in Sources */,
 				03B40A2C92477C575CADBF09 /* ClaudeUsageAPIClient.swift in Sources */,
 				2FA450FB9FA1E2778BE0D241 /* CodemonApp.swift in Sources */,
 				D7FBFBDE1D266AE91132CD1F /* CodexUsageAPIClient.swift in Sources */,
@@ -349,7 +353,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.5.1;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.adrian.codemon;
 				PRODUCT_NAME = codemon;
 				SDKROOT = macosx;
@@ -373,7 +377,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.5.1;
+				MARKETING_VERSION = 1.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.adrian.codemon;
 				PRODUCT_NAME = codemon;
 				SDKROOT = macosx;

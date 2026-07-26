@@ -18,7 +18,7 @@ final class ProviderAuthService: ObservableObject {
         let task = loadTask ?? {
             let provider = self.provider
             let task = Task.detached(priority: .utility) {
-                try? LocalCredentialsStore.load(for: provider)
+                await Self.loadRefreshingIfNeeded(for: provider)
             }
             loadTask = task
             return task
@@ -40,5 +40,19 @@ final class ProviderAuthService: ObservableObject {
     func markExpired() {
         guard authState == .signedIn else { return }
         authState = .expired
+    }
+
+    private static let refreshLeeway: TimeInterval = 300
+
+    private static func loadRefreshingIfNeeded(for provider: UsageProvider) async -> ProviderCredentials? {
+        guard let credentials = try? LocalCredentialsStore.load(for: provider) else { return nil }
+        guard provider == .claude, credentials.expires(within: refreshLeeway) else { return credentials }
+        guard let refreshToken = credentials.refreshToken else { return credentials }
+
+        do {
+            return try await LocalCredentialsStore.refreshClaude(using: refreshToken)
+        } catch {
+            return (try? LocalCredentialsStore.load(for: provider)) ?? credentials
+        }
     }
 }
