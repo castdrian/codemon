@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.6.1]
+
+- Show Codex balances as credit counts instead of US dollars. A remaining balance of 250 now reads as "250 credits left" rather than "$250.00", while Claude's prepaid balance continues to use its reported currency
+- Keep the Codex overlay's exhausted-limit state consistent with Claude by showing the reset countdown instead of a separate red "out of usage" label
+
 ## [1.6.0]
 
 - Keep the Claude widget running when the CLI's token lapses. codemon read the access token the `claude` CLI keeps in the Keychain but never the refresh token stored beside it, so once that token expired the widget went dark until you happened to run `claude` again. It now renews the token itself, five minutes ahead of expiry, and writes the new pair back to the same Keychain entry with every other field the CLI stores there left intact
