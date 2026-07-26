@@ -63,9 +63,9 @@ struct FloatingWidgetView: View {
             UsageBar(percent: value ?? 0, color: Self.usageColor(for: value ?? 0))
 
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text(window.isExhausted ? Self.exhaustedLabel(window.resetsAt, now: context.date) : Self.resetLabel(window.resetsAt, now: context.date))
+                Text(Self.resetLabel(window.resetsAt, now: context.date))
                     .font(.system(size: 9))
-                    .foregroundStyle(window.isExhausted ? Color(red: 0.910, green: 0.298, blue: 0.235) : .secondary)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -96,6 +96,9 @@ struct FloatingWidgetView: View {
         guard let credit else { return "—" }
         if credit.isUnlimited { return "Unlimited" }
         if let remaining = credit.remaining {
+            if credit.displayUnit == .credits {
+                return "\(formatCredits(remaining)) credits left"
+            }
             return "\(formatCurrency(remaining, credit: credit)) left"
         }
         if let percent = credit.percentUsed {
@@ -116,9 +119,12 @@ struct FloatingWidgetView: View {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 
-    private static func exhaustedLabel(_ resetsAt: Date?, now: Date) -> String {
-        guard let resetsAt, resetsAt.timeIntervalSince(now) > 0 else { return "out of usage" }
-        return "out of usage · \(resetLabel(resetsAt, now: now))"
+    private static func formatCredits(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = value.rounded() == value ? 0 : 2
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 
     private static func resetLabel(_ resetsAt: Date?, now: Date) -> String {

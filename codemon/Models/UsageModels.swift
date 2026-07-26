@@ -45,7 +45,11 @@ enum UsageProvider: String, CaseIterable, Identifiable {
 struct UsageWindow: Equatable {
     var utilization: Double
     var resetsAt: Date?
-    var isExhausted: Bool = false
+}
+
+enum CreditDisplayUnit: Equatable {
+    case currency
+    case credits
 }
 
 struct CreditUsage: Equatable {
@@ -56,6 +60,7 @@ struct CreditUsage: Equatable {
     var currency: String?
     var decimalPlaces: Int
     var isUnlimited: Bool = false
+    var displayUnit: CreditDisplayUnit = .currency
 }
 
 struct UsageSnapshot: Equatable {

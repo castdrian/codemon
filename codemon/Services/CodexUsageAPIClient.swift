@@ -21,9 +21,8 @@ struct CodexUsageAPIClient {
         }
 
         let rateLimit = (json["rate_limit"] as? [String: Any]) ?? [:]
-        let limitReached = (rateLimit["limit_reached"] as? Bool == true) || (rateLimit["allowed"] as? Bool == false)
         let windows = [rateLimit["primary_window"], rateLimit["secondary_window"]]
-            .compactMap { usageWindow($0 as? [String: Any], limitReached: limitReached) }
+            .compactMap { usageWindow($0 as? [String: Any]) }
 
         let session = windows.first { $0.isSession }?.window
         let weekly = windows.first { !$0.isSession }?.window
@@ -42,13 +41,13 @@ struct CodexUsageAPIClient {
         )
     }
 
-    private func usageWindow(_ entry: [String: Any]?, limitReached: Bool) -> (window: UsageWindow, isSession: Bool)? {
+    private func usageWindow(_ entry: [String: Any]?) -> (window: UsageWindow, isSession: Bool)? {
         guard let entry, let usedPercent = number(entry["used_percent"]) else { return nil }
         let reset = number(entry["reset_at"]).map { Date(timeIntervalSince1970: $0) }
         let windowSeconds = number(entry["limit_window_seconds"]) ?? Self.sessionWindowCutoff
         let utilization = min(max(usedPercent, 0), 100)
         return (
-            UsageWindow(utilization: utilization, resetsAt: reset, isExhausted: limitReached || utilization >= 100),
+            UsageWindow(utilization: utilization, resetsAt: reset),
             windowSeconds <= Self.sessionWindowCutoff
         )
     }
@@ -57,7 +56,7 @@ struct CodexUsageAPIClient {
         guard let entry else { return nil }
         let unlimited = entry["unlimited"] as? Bool ?? false
         if unlimited {
-            return CreditUsage(remaining: nil, limit: nil, used: nil, percentUsed: nil, currency: "USD", decimalPlaces: 2, isUnlimited: true)
+            return CreditUsage(remaining: nil, limit: nil, used: nil, percentUsed: nil, currency: nil, decimalPlaces: 0, isUnlimited: true, displayUnit: .credits)
         }
 
         guard entry["has_credits"] as? Bool == true,
@@ -70,13 +69,14 @@ struct CodexUsageAPIClient {
 
         let spent = max(baseline - balance, 0)
         return CreditUsage(
-            remaining: balance * 100,
-            limit: baseline * 100,
-            used: spent * 100,
+            remaining: balance,
+            limit: baseline,
+            used: spent,
             percentUsed: min(max(spent / baseline * 100, 0), 100),
-            currency: "USD",
-            decimalPlaces: 2,
-            isUnlimited: false
+            currency: nil,
+            decimalPlaces: 0,
+            isUnlimited: false,
+            displayUnit: .credits
         )
     }
 
